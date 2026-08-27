@@ -3,7 +3,26 @@ import {addDetection,addPhoto,levelProgress,locationCollections,makeDetection,ma
 import {BrowserStorageProvider,downloadBlob} from './src/storage.js';
 
 const storage=new BrowserStorageProvider();
-let library=await storage.loadLibrary();
+async function mergeHostedLibrary(local){
+  try{
+    const responses=await Promise.all(['sessions','photos','detections','albums'].map(resource=>fetch(`/api/${resource}`)));
+    if(responses.some(response=>!response.ok))throw new Error('Hosted library unavailable');
+    const [sessions,photos,detections,albums]=await Promise.all(responses.map(response=>response.json()));
+    const merge=(localItems,hostedItems)=>[...new Map([...localItems,...hostedItems].map(item=>[item.id,item])).values()];
+    return{
+      ...local,
+      sessions:merge(local.sessions,sessions),
+      photos:merge(local.photos,photos),
+      detections:merge(local.detections,detections.map(detection=>({...detection,snippetRef:detection.snippetRef||`/api/snippets/${detection.id}`}))),
+      albums:merge(local.albums,albums),
+      updatedAt:new Date().toISOString()
+    };
+  }catch{
+    return local;
+  }
+}
+let library=await mergeHostedLibrary(await storage.loadLibrary());
+await storage.saveLibrary(library);
 let current=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];
 let answered=false;let pendingImage=null;
 const views={catch:document.querySelector('#catch-view'),atlas:document.querySelector('#atlas-view'),data:document.querySelector('#data-view')};
