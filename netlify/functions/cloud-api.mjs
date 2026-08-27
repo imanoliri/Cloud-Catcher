@@ -3,7 +3,7 @@ import sharp from 'sharp';
 
 function cloudTypes(){return[['cirrus','Cirrus','Ci','high'],['cirrocumulus','Cirrocumulus','Cc','high'],['cirrostratus','Cirrostratus','Cs','high'],['altocumulus','Altocumulus','Ac','middle'],['altostratus','Altostratus','As','middle'],['nimbostratus','Nimbostratus','Ns','middle'],['stratocumulus','Stratocumulus','Sc','low'],['stratus','Stratus','St','low'],['cumulus','Cumulus','Cu','vertical'],['cumulonimbus','Cumulonimbus','Cb','vertical']].map(([id,name,code,family])=>({id,name,code,family,level:1}))}
 function store(){const production=globalThis.Netlify?.context?.deploy?.context==='production';return production?getStore('cloud-catcher'):getDeployStore('cloud-catcher')}
-function empty(){return{format:'cloud-catcher',taxonomyVersion:'1.0',photos:[],detections:[],albums:[],updatedAt:new Date().toISOString()}}
+function empty(){return{format:'cloud-catcher',photos:[],detections:[],albums:[],updatedAt:new Date().toISOString()}}
 async function load(){return await store().get('library',{type:'json'})||empty()}
 async function save(lib){lib.updatedAt=new Date().toISOString();await store().setJSON('library',lib);return lib}
 function authorized(request){const token=globalThis.Netlify?.env?.get?.('CLOUD_CATCHER_API_TOKEN');return Boolean(token)&&request.headers.get('authorization')===`Bearer ${token}`}
