@@ -13,7 +13,7 @@ function chooseQuestion(){
 function renderLearn(){
   if(!current)chooseQuestion();
   const choices=shuffle([current,...shuffle(LEVEL_ONE.filter(c=>c.id!==current.id)).slice(0,3)]);
-  learnView.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>This quiz is for practice only. Answers never create catches or change your Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="sky-stage" aria-label="Stylized cloud learning challenge"></div></div>`;
+  learnView.innerHTML=`<div class="panel learn-panel"><p class="eyebrow">Learn · Level 1</p><h2>Which cloud is this?</h2><p>This quiz is for practice only. Answers never create catches or change your Atlas progress.</p><figure class="learn-question"><img src="${current.referenceImage}" alt="Cloud identification practice image"><figcaption>Reference training image · Wikimedia Commons</figcaption></figure><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div>`;
   learnView.querySelectorAll('[data-learn-choice]').forEach(button=>button.addEventListener('click',()=>answer(button.dataset.learnChoice)));
 }
 function answer(id){
@@ -22,7 +22,7 @@ function answer(id){
   const correct=id===current.id;
   const type=getCloudType(current.id);
   const feedback=learnView.querySelector('#learn-feedback');
-  feedback.innerHTML=`<div class="feedback"><strong>${correct?'Correct!':'Not quite.'}</strong> This is <b>${type.name}</b>. ${type.clue}<div class="toolbar"><button id="learn-next" class="primary">Next cloud</button></div></div>`;
+  feedback.innerHTML=`<div class="feedback"><strong>${correct?'Correct!':'Not quite.'}</strong> This is <b>${type.name}</b>. ${type.clue}<div class="toolbar"><a class="button" href="${type.referencePage}" target="_blank" rel="noreferrer">Photo source</a><button id="learn-next" class="primary">Next cloud</button></div></div>`;
   learnView.querySelector('#learn-next').addEventListener('click',()=>{chooseQuestion();renderLearn()});
 }
 
