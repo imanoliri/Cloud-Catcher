@@ -1,0 +1,192 @@
+# Future use cases
+
+This document tracks user journeys Cloud Catcher should support but does **not** yet support end to end. The current implementation audit lives in [`docs/USE_CASES.md`](docs/USE_CASES.md).
+
+## Priority 1 — Make the basic field workflow complete
+
+### F1 — Take a photo directly from the phone
+
+**Goal:** Open Cloud Catcher outdoors, launch the camera directly, take a photo and continue immediately to classification.
+
+**Acceptance criteria:**
+- Catch screen offers a camera-first action on supported mobile devices.
+- Newly captured image appears immediately in the classification flow.
+- Existing file-picker upload remains available.
+
+### F2 — Visual cloud-region selection
+
+**Goal:** Mark the cloud in the image instead of entering crop percentages manually.
+
+**Acceptance criteria:**
+- User can draw/resize a rectangular region on the photo.
+- Existing regions are visible while adding more detections.
+- Region coordinates remain normalized in the current domain model.
+- Later extension can support polygon drawing.
+
+### F3 — Complete proposal review UI
+
+**Goal:** Review AI detections without touching an API.
+
+**Acceptance criteria:**
+- Proposed crop opens in a review view.
+- User can Confirm, Reject, or Correct genus.
+- User can edit confidence/notes when useful.
+- User can redraw the region.
+- Confirming immediately updates Atlas/location progress.
+- Rejected proposals disappear from collection views but remain represented in the data model as rejected.
+
+### F4 — Individual observation detail screen
+
+**Goal:** Open one detected cloud as a complete observation.
+
+**Acceptance criteria:**
+- Shows full crop and original photo.
+- Shows genus, status, confidence, date, location, notes and source.
+- Shows other detections from the same photo.
+- Offers edit/review actions where appropriate.
+
+### F5 — Durable browser image storage
+
+**Goal:** Keep a useful personal collection without running into `localStorage` limits.
+
+**Acceptance criteria:**
+- Store browser images in IndexedDB or another binary-capable local store.
+- Keep library metadata portable.
+- Existing browser collections can be moved into the new storage approach without data loss.
+
+## Priority 2 — Make AI assistance a first-class product flow
+
+### F6 — “What is this cloud?”
+
+**Goal:** Upload/capture one image and have Cloud Catcher propose cloud genera automatically.
+
+**Acceptance criteria:**
+- One user action requests analysis.
+- Multiple cloud regions may be proposed from one image.
+- Every proposal includes genus, crop/region, confidence and a short explanation.
+- Similar/confusable genera can be shown as alternatives.
+- Results enter the normal proposal review flow; they do not count until confirmed unless an explicit confidence/review policy says otherwise.
+
+### F7 — Analyze a batch/session from the UI
+
+**Goal:** Import an outing with many photos without an external API client.
+
+**Acceptance criteria:**
+- Select multiple photos.
+- Create or infer one session.
+- Run AI analysis over the batch.
+- Show all proposals in a review queue.
+- Persist originals once and detections separately.
+
+### F8 — Suggest what to catch next today
+
+**Goal:** Turn missing genera into a useful real-world objective.
+
+**Acceptance criteria:**
+- Starts from the user's missing confirmed genera.
+- Optionally considers current/local cloud/weather conditions.
+- Returns a small ranked set of plausible targets with identification clues.
+- Never marks anything caught without a real confirmed observation.
+
+## Priority 3 — Make the collection browsable as a real archive
+
+### F9 — Location detail pages
+
+**Goal:** Open a place such as San Sebastián and see the cloud history there.
+
+**Acceptance criteria:**
+- Shows caught/missing genera and completion status.
+- Shows all photos, detections and sessions at that location.
+- Supports location aliases/normalization so spelling variants do not accidentally create separate collections.
+
+### F10 — Session/outing pages
+
+**Goal:** Replay one cloud-watching outing as a coherent gallery.
+
+**Acceptance criteria:**
+- User can create, rename and edit sessions from the UI.
+- Session page shows chronological photos and detections.
+- Photos can be moved between sessions.
+- Batch imports expose their created session in the UI.
+
+### F11 — Search, filter and sort the journal
+
+**Goal:** Find old observations quickly.
+
+**Acceptance criteria:**
+- Filter by genus, location, status, date/session and confidence.
+- Sort newest/oldest and optionally by confidence.
+- Unclassified photos remain discoverable.
+
+### F12 — Self-contained backup/export
+
+**Goal:** Export the collection so it can be restored independently of the currently hosted Netlify image URLs.
+
+**Acceptance criteria:**
+- Export metadata plus original images, or a documented archive format containing both.
+- Import restores photos, detections, sessions and albums.
+- Hosted and browser collections can be backed up using the same conceptual format.
+- Export remains user-owned and provider-independent.
+
+## Priority 4 — Complete the game/learning progression
+
+### F13 — Level 2 and deeper taxonomy
+
+**Goal:** Completing Level 1 should unlock more detailed cloud learning rather than ending the game.
+
+**Acceptance criteria:**
+- Taxonomy supports deeper children under Level 1 genera.
+- UI clearly explains the newly unlocked level.
+- Progress is calculated independently per level/subtree.
+- Existing Level 1 observations remain valid.
+
+### F14 — Reclassify old photos at deeper levels
+
+**Goal:** Existing photographs gain new learning value as the user progresses.
+
+**Acceptance criteria:**
+- Old observations can receive finer classifications later.
+- Finer detections link back to the same original photo/region where appropriate.
+- Reclassification never destroys the historical broader classification without an explicit correction.
+
+### F15 — Nested location challenges
+
+**Goal:** Make familiar locations long-running collection challenges.
+
+**Acceptance criteria:**
+- A location can have separate completion for Level 1, Level 2 and later levels.
+- Location cards visually show progress by level.
+
+### F16 — Completion rewards and next objective
+
+**Goal:** Finishing a collection should feel like game progression.
+
+**Acceptance criteria:**
+- Level/location completion gets a clear celebration/state change.
+- The next available taxonomy level or challenge is presented immediately.
+- Progress never depends on reference images or unconfirmed proposals.
+
+## Priority 5 — Personal cloud history
+
+### F17 — Timeline and seasonal history
+
+Browse observations over months/years by date, season, genus, location and weather episode.
+
+### F18 — Personal statistics
+
+Show useful statistics such as most commonly caught genera, locations with most diversity, time to complete a level, and seasonal patterns. Avoid turning uncertain/proposed detections into authoritative statistics.
+
+### F19 — Rarity / notable catches
+
+Allow taxonomy or rules to identify unusually interesting observations, while keeping the core learning game understandable for beginners.
+
+## Architecture constraints for future work
+
+Future features should preserve these existing decisions:
+
+1. **One original photo, many detections.** Do not duplicate images per cloud type.
+2. **Reference / proposed / confirmed remain distinct.** Only confirmed real observations advance progress.
+3. **Simulation/domain state stays separate from presentation.** UI features should use domain/API operations rather than encode separate progress rules.
+4. **Portable data remains canonical.** Netlify, browser storage, Google Drive and future providers are adapters.
+5. **AI is an assistant, not a parallel database.** AI-produced detections use the same normal detection model and review flow.
+6. **Keep the MVP understandable.** Prefer completing the field-observation loop before adding social, competitive or highly elaborate mechanics.
