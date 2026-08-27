@@ -13,15 +13,17 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - Newly captured image appears immediately in the classification flow.
 - Existing file-picker upload remains available.
 
-### F2 — Visual cloud-region selection
+### F2 — Edit and visualize saved cloud regions
 
-**Goal:** Mark the cloud in the image instead of entering crop percentages manually.
+**Goal:** Build on the implemented gesture rectangle selector so multiple saved regions on one photo can be reviewed and adjusted visually.
 
 **Acceptance criteria:**
-- User can draw/resize a rectangular region on the photo.
-- Existing regions are visible while adding more detections.
-- Region coordinates remain normalized in the current domain model.
-- Later extension can support polygon drawing.
+- Existing saved regions are overlaid on the original photo with genus/status labels.
+- User can tap a saved region and move/resize it.
+- User can redraw a mistaken region without deleting/recreating the observation manually.
+- Multiple overlapping regions remain understandable.
+- Region coordinates continue to use the existing normalized domain model.
+- Later extension can support polygon/freeform drawing when rectangular crops are insufficient.
 
 ### F3 — Complete proposal review UI
 
