@@ -1,6 +1,6 @@
 # Cloud Catcher use cases
 
-Cloud Catcher is intended to be a field game, learning tool, personal cloud atlas, and AI-assisted observation archive. This document now records **what the current MVP actually supports**, not only the intended journeys.
+Cloud Catcher is intended to be a field game, learning tool, personal cloud atlas, and AI-assisted observation archive. This document records **what the current MVP actually supports**, not only the intended journeys.
 
 Status meanings:
 
@@ -13,8 +13,8 @@ Status meanings:
 | Use case | Status | What actually works today | Main gap |
 | --- | --- | --- | --- |
 | UC1 — Learn the ten Level 1 genera | **Works** | Atlas contains all ten genera, reference photos, names, clues, and a clickable large-image viewer. Reference images are clearly labeled as examples. | Reference photos are remotely hosted; offline reference-image support is not guaranteed. |
-| UC2 — Catch a cloud manually from a photo | **Partial** | Catch screen accepts an image, location, genus, confidence and numeric crop coordinates; confirmed detections appear in the local Atlas. | This browser flow writes to local browser storage, not the hosted API, and the crop is entered numerically rather than drawn on the image. Large image collections can hit `localStorage` limits. |
-| UC3 — Identify several cloud types in one photo | **Partial** | The domain and API support many detections referencing one photo; the manual form can add another detection after saving the first. | There is no visual region editor, no overview of regions before saving, and the manual browser flow is awkward for repeated detections. |
+| UC2 — Catch a cloud manually from a photo | **Partial** | Catch accepts an image, location, genus and confidence. The user drags directly over the photo with touch or mouse to select the cloud region; normalized coordinates are stored automatically and the confirmed crop appears in the Atlas. | This browser flow writes to local browser storage rather than the hosted API, and large image collections can hit `localStorage` limits. |
+| UC3 — Identify several cloud types in one photo | **Works** | One photo remains loaded after a detection is saved. The selection clears, and the user can repeatedly select another region, classify it and save it. Every detection references the same original photo and stores its own normalized region. | Existing saved regions are not yet drawn together on the editor, and saved regions cannot yet be resized visually. |
 | UC4 — Let an AI import a batch of cloud photos | **Partial** | `/api/catches/batch` and `/ai-tools/import-cloud-photos` support one multipart batch with photos, session metadata and detections. | Cloud Catcher itself does not run image recognition. An external AI/client must inspect the images and call the endpoint. There is no in-app “analyze these photos” button yet. |
 | UC5 — Review an AI proposal | **Partial** | Proposed detections are visible, do not count toward progress, and can be corrected/confirmed/rejected through the API/domain layer. | The normal UI has no confirm/correct/reject controls. Review currently requires an API/AI client or developer-facing method. |
 | UC6 — Browse the personal Cloud Atlas | **Works** | Confirmed, proposed and missing genera are visually distinct; missing genera use reference photos; tiles open in a large viewer. | The viewer is genus-centric rather than a complete observation-detail screen. |
@@ -28,7 +28,7 @@ Status meanings:
 
 ## Verified implementation rules
 
-The following important rules are directly implemented in the domain/API and covered by current code/tests:
+The following important rules are directly implemented in the domain/API and covered by current code/tests or UI behavior:
 
 1. A single photo can contain multiple detections.
 2. Proposed detections do not advance collection progress.
@@ -38,27 +38,25 @@ The following important rules are directly implemented in the domain/API and cov
 6. Detection status can be `proposed`, `confirmed`, or `rejected`.
 7. Detection regions support normalized rectangles and polygons.
 8. Hosted detections can generate cropped snippet images from the original uploaded photo.
+9. The manual Catch flow maps touch/mouse rectangle gestures to normalized detection coordinates.
+10. After saving one region, the same original image stays active so additional regions can be caught without re-uploading it.
 
 ## Core loop that is genuinely usable now
-
-The most complete current path is:
 
 1. Open **Atlas** to learn the ten genera from examples.
 2. Take a cloud photo with the phone/camera app.
 3. Open **Catch** and choose the photo.
-4. Select the genus and save a confirmed detection.
-5. Add another detection if the same photo contains another genus.
-6. Open **Atlas** to see the catch replace the reference example.
-7. Use the missing reference cards/progress count to decide what to look for next.
+4. Drag a rectangle around one cloud or cloud region in the photo.
+5. Choose the genus and save that selected region as a confirmed catch.
+6. If the same image contains another cloud, drag over the next region and classify it separately.
+7. Repeat as many times as useful on that same original image.
+8. Open **Atlas** to see confirmed crops replace reference examples.
+9. Use the missing reference cards/progress count to decide what to look for next.
 
 For larger batches, the more effective current path is an external AI/API client using `POST /api/catches/batch` rather than manual entry.
 
-## Important implementation caveat
-
-The clickable Atlas grid/lightbox was initially added to source files without copying those files into the Netlify `dist` build. This made the deploy report success while mobile users still received the older Atlas behavior. The production build now explicitly copies `atlas-viewer.js` and `atlas-viewer.css`.
-
 ## Product principle
 
-**Reference examples teach the user what to look for. Proposed identifications help review uncertain observations. Only confirmed real observations advance the collection.**
+**One original photo may contain many independently classified regions. Reference examples teach the user what to look for. Proposed identifications help review uncertain observations. Only confirmed real observations advance the collection.**
 
 Future and incomplete journeys are tracked in [`../FUTURE.md`](../FUTURE.md).
