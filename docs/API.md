@@ -8,7 +8,7 @@ The MVP API is intentionally open for reads and writes. It has no authentication
 
 For normal AI ingestion, prefer `POST /api/catches`. It stores one photo plus all cloud detections found in that photo in one request.
 
-For an outing or imported photo batch, prefer `POST /api/catches/batch`. It can create one session and ingest many photos with shared defaults such as location, date, and source.
+For an outing or imported photo batch, prefer `POST /api/catches/batch` with `multipart/form-data`. One request carries all image files plus one JSON metadata part describing the session, shared metadata, and detections.
 
 The lower-level `/photos` and `/detections` endpoints remain available for editing or incremental workflows.
 
@@ -69,9 +69,16 @@ The lower-level `/photos` and `/detections` endpoints remain available for editi
 
 The response contains the created `photo` and all created `detections`. Each detection includes `snippetRef`, which points to a JPEG crop generated from its region.
 
-## Import a whole cloud session
+## Import a whole cloud session in one request
 
 `POST /api/catches/batch`
+
+Use `multipart/form-data`. The request contains:
+
+- one text field named `metadata` containing JSON;
+- one file field per photo (`photo0`, `photo1`, ... by default).
+
+Example metadata:
 
 ```json
 {
@@ -87,8 +94,8 @@ The response contains the created `photo` and all created `detections`. Each det
   },
   "catches": [
     {
+      "fileField": "photo0",
       "originalName": "39640.jpg",
-      "imageDataUrl": "data:image/jpeg;base64,...",
       "detections": [
         {
           "cloudTypeId": "stratocumulus",
@@ -99,8 +106,8 @@ The response contains the created `photo` and all created `detections`. Each det
       ]
     },
     {
+      "fileField": "photo1",
       "originalName": "39367.jpg",
-      "imageDataUrl": "data:image/jpeg;base64,...",
       "detections": [
         {
           "cloudTypeId": "altostratus",
@@ -114,7 +121,21 @@ The response contains the created `photo` and all created `detections`. Each det
 }
 ```
 
-The response contains the created session, each photo/detection result, and a summary with total photo and detection counts.
+Conceptually the multipart request is:
+
+```text
+metadata = <JSON above>
+photo0   = 39640.jpg
+photo1   = 39367.jpg
+...
+photo8   = ninth-photo.jpg
+```
+
+If `fileField` is omitted, Cloud Catcher expects `photo0`, `photo1`, and so on according to catch order.
+
+The endpoint stores each original image once, creates the optional session, creates every detection, and returns the session, all photo/detection results, snippet references, and batch totals. This is the preferred interface for an AI ingesting a set such as nine photos from one outing.
+
+For compatibility with simple clients, `/api/catches/batch` also accepts the older JSON form using `imageDataUrl`, but multipart upload is preferred for real image files.
 
 ## Sessions
 
@@ -152,6 +173,10 @@ Detection status may be `proposed`, `confirmed`, or `rejected`. Only confirmed d
 `POST /api/detections` adds a detection to an existing photo. `PATCH /api/detections/:id` can correct the type, confidence, region, status, or notes.
 
 These endpoints are useful for editing, but AI clients should normally use `/api/catches` or `/api/catches/batch` for ingestion.
+
+## Persistence
+
+The hosted API uses the global Netlify Blob store named `cloud-catcher`, so catches ingested through a Deploy Preview remain available after later preview builds and after the branch is merged.
 
 ## Browser API
 
