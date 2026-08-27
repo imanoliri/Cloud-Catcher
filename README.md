@@ -27,7 +27,7 @@ npm run dev
 npm run build
 ```
 
-Netlify configuration lives in `netlify.toml`.
+Netlify configuration lives in `netlify.toml`. The GitHub repository is connected to the Netlify project `cloud-catcher-game`, with `main` as production and pull requests deployed as previews.
 
 ## Documentation
 
