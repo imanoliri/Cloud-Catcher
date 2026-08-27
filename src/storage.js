@@ -1,5 +1,5 @@
 import {emptyLibrary,validateLibrary} from './domain.js';
-const KEY='cloud-catcher-library-v1';
+const KEY='cloud-catcher-library';
 export class BrowserStorageProvider{
   async loadLibrary(){const raw=localStorage.getItem(KEY);return raw?validateLibrary(JSON.parse(raw)):emptyLibrary()}
   async saveLibrary(library){localStorage.setItem(KEY,JSON.stringify({...library,updatedAt:new Date().toISOString()}))}
