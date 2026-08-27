@@ -9,18 +9,25 @@ jobs:
   add-detections:
     runs-on: ubuntu-latest
     steps:
-      - name: Add missing secondary detections to Cloud Catcher
+      - name: Replace secondary detections atomically
         shell: bash
         run: |
           set -euo pipefail
-          API='https://deploy-preview-1--cloud-catcher-game.netlify.app/api/detections'
-          post() {
-            curl --fail-with-body -sS -X POST "$API" -H 'content-type: application/json' -d "$1"
-            echo
-            sleep 4
+          curl --fail-with-body -sS -X POST \
+            'https://deploy-preview-1--cloud-catcher-game.netlify.app/api/detections/batch' \
+            -H 'content-type: application/json' \
+            --data-binary @- <<'JSON'
+          {
+            "replaceSource":"ai-secondary-review",
+            "detections":[
+              {"photoId":"dccafa50-f742-48b6-b87a-debc74c4d0fc","cloudTypeId":"cumulus","confidence":0.62,"status":"proposed","region":{"type":"rect","x":0.58,"y":0.12,"width":0.38,"height":0.34},"notes":"Secondary rounded convective elements embedded beneath/within the broader low deck; proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"6575bf41-f65d-447e-a198-6b838a85cd25","cloudTypeId":"altocumulus","confidence":0.71,"status":"proposed","region":{"type":"rect","x":0.42,"y":0.02,"width":0.50,"height":0.32},"notes":"Smaller patterned elements above the broken low layer; likely Altocumulus, proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"461e32a8-6c87-4368-8214-e4d27e7f4df0","cloudTypeId":"stratocumulus","confidence":0.82,"status":"confirmed","region":{"type":"rect","x":0.00,"y":0.00,"width":1.00,"height":0.30},"notes":"Background low stratocumulus deck behind the more strongly developed cumulus towers.","source":"ai-secondary-review"},
+              {"photoId":"deac5b8e-9ecb-4562-827e-91ac2a2cc809","cloudTypeId":"cumulus","confidence":0.67,"status":"proposed","region":{"type":"rect","x":0.05,"y":0.25,"width":0.42,"height":0.30},"notes":"Rounded low convective elements beneath the mixed stratocumulus/altocumulus field; proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"6740ac31-d1b2-4407-ad3a-f5139ade0228","cloudTypeId":"stratus","confidence":0.60,"status":"proposed","region":{"type":"rect","x":0.00,"y":0.46,"width":1.00,"height":0.24},"notes":"Smoother low-ceiling portions near the horizon may be Stratus rather than textured Stratocumulus; proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"60354921-2fc5-42c0-9ee2-cfe81285c6ba","cloudTypeId":"stratocumulus","confidence":0.73,"status":"proposed","region":{"type":"rect","x":0.20,"y":0.24,"width":0.60,"height":0.26},"notes":"A broader low connected layer is also present between the cumulus and smaller altocumulus elements; proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"0be3c46d-3440-4687-9784-3b686e592d55","cloudTypeId":"stratus","confidence":0.64,"status":"proposed","region":{"type":"rect","x":0.00,"y":0.34,"width":1.00,"height":0.24},"notes":"Smooth low layer toward Monte Igueldo/horizon may contain Stratus beneath the rounded Stratocumulus masses; proposed for review.","source":"ai-secondary-review"},
+              {"photoId":"e299faeb-4358-4419-8281-c5cedabd9c83","cloudTypeId":"cumulus","confidence":0.69,"status":"proposed","region":{"type":"rect","x":0.05,"y":0.14,"width":0.42,"height":0.28},"notes":"More isolated sunlit rounded elements within the broken deck resemble Cumulus; proposed for review.","source":"ai-secondary-review"}
+            ]
           }
-
-          post '{"photoId":"6575bf41-f65d-447e-a198-6b838a85cd25","cloudTypeId":"altocumulus","confidence":0.71,"status":"proposed","region":{"type":"rect","x":0.42,"y":0.02,"width":0.50,"height":0.32},"notes":"Smaller patterned elements above the broken low layer; likely Altocumulus, proposed for review.","source":"ai-secondary-review"}'
-          post '{"photoId":"deac5b8e-9ecb-4562-827e-91ac2a2cc809","cloudTypeId":"cumulus","confidence":0.67,"status":"proposed","region":{"type":"rect","x":0.05,"y":0.25,"width":0.42,"height":0.30},"notes":"Rounded low convective elements beneath the mixed stratocumulus/altocumulus field; proposed for review.","source":"ai-secondary-review"}'
-          post '{"photoId":"60354921-2fc5-42c0-9ee2-cfe81285c6ba","cloudTypeId":"stratocumulus","confidence":0.73,"status":"proposed","region":{"type":"rect","x":0.20,"y":0.24,"width":0.60,"height":0.26},"notes":"A broader low connected layer is also present between the cumulus and smaller altocumulus elements; proposed for review.","source":"ai-secondary-review"}'
-          post '{"photoId":"e299faeb-4358-4419-8281-c5cedabd9c83","cloudTypeId":"cumulus","confidence":0.69,"status":"proposed","region":{"type":"rect","x":0.05,"y":0.14,"width":0.42,"height":0.28},"notes":"More isolated sunlit rounded elements within the broken deck resemble Cumulus; proposed for review.","source":"ai-secondary-review"}'
+          JSON
