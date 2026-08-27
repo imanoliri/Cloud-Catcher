@@ -1,16 +1,27 @@
 # Cloud Catcher API
 
-Cloud Catcher exposes the same domain concepts to humans and AI clients. The hosted API is served by Netlify Functions and stores its server-side library in Netlify Blobs.
+Cloud Catcher exposes the same domain concepts to humans and AI clients. The hosted API is served by Netlify Functions and stores library data and uploaded images in Netlify Blobs.
 
-## Authentication
+The MVP API is intentionally open for reads and writes. It has no authentication layer yet.
 
-Read operations are public in the MVP. Write operations require `Authorization: Bearer <CLOUD_CATCHER_API_TOKEN>`. If the environment variable is not configured, mutations remain disabled.
+## Recommended AI workflow
+
+For normal AI ingestion, prefer `POST /api/catches`. It stores one photo plus all cloud detections found in that photo in one request.
+
+For an outing or imported photo batch, prefer `POST /api/catches/batch`. It can create one session and ingest many photos with shared defaults such as location, date, and source.
+
+The lower-level `/photos` and `/detections` endpoints remain available for editing or incremental workflows.
 
 ## Endpoints
 
 - `GET /api/status`
 - `GET /api/cloud-types`
 - `GET /api/cloud-types/:id`
+- `GET /api/sessions`
+- `GET /api/sessions/:id`
+- `POST /api/sessions`
+- `POST /api/catches`
+- `POST /api/catches/batch`
 - `GET /api/photos`
 - `GET /api/photos/:id`
 - `POST /api/photos`
@@ -28,42 +39,119 @@ Read operations are public in the MVP. Write operations require `Authorization: 
 - `PATCH /api/albums/:id`
 - `GET /api/progress?location=San%20Sebasti%C3%A1n`
 
-## Upload a photo
+## Create one complete catch
 
-A client can provide either `imageRef` or a base64 `imageDataUrl`. Uploaded image data is stored once and can be referenced by several detections.
+`POST /api/catches`
 
 ```json
 {
   "location": "San Sebastián",
   "observedAt": "2026-08-27T15:00:00Z",
-  "originalName": "sky.jpg",
+  "originalName": "39640.jpg",
   "imageDataUrl": "data:image/jpeg;base64,...",
-  "source": "ai"
+  "source": "ai",
+  "detections": [
+    {
+      "cloudTypeId": "stratocumulus",
+      "confidence": 0.91,
+      "status": "confirmed",
+      "region": {
+        "type": "rect",
+        "x": 0.03,
+        "y": 0.02,
+        "width": 0.72,
+        "height": 0.50
+      }
+    }
+  ]
 }
 ```
 
-## Add a cloud detection
+The response contains the created `photo` and all created `detections`. Each detection includes `snippetRef`, which points to a JPEG crop generated from its region.
 
-A detection belongs to one photo. Its region uses normalized `0..1` coordinates and may be either a rectangle or polygon. AI-created detections should normally start as `proposed`; only `confirmed` detections count toward the Cloud Atlas and location progress.
+## Import a whole cloud session
+
+`POST /api/catches/batch`
 
 ```json
 {
-  "photoId": "PHOTO_ID",
-  "cloudTypeId": "stratocumulus",
-  "confidence": 0.93,
-  "status": "proposed",
-  "region": {
-    "type": "rect",
-    "x": 0.04,
-    "y": 0.02,
-    "width": 0.66,
-    "height": 0.43
+  "session": {
+    "name": "San Sebastián sky — 27 Aug 2026",
+    "location": "San Sebastián",
+    "observedAt": "2026-08-27T15:00:00Z",
+    "source": "ai"
   },
-  "source": "ai"
+  "defaults": {
+    "location": "San Sebastián",
+    "source": "ai"
+  },
+  "catches": [
+    {
+      "originalName": "39640.jpg",
+      "imageDataUrl": "data:image/jpeg;base64,...",
+      "detections": [
+        {
+          "cloudTypeId": "stratocumulus",
+          "confidence": 0.91,
+          "status": "confirmed",
+          "region": {"type":"rect","x":0.03,"y":0.02,"width":0.72,"height":0.50}
+        }
+      ]
+    },
+    {
+      "originalName": "39367.jpg",
+      "imageDataUrl": "data:image/jpeg;base64,...",
+      "detections": [
+        {
+          "cloudTypeId": "altostratus",
+          "confidence": 0.82,
+          "status": "confirmed",
+          "region": {"type":"rect","x":0,"y":0,"width":1,"height":0.72}
+        }
+      ]
+    }
+  ]
 }
 ```
 
-`GET /api/snippets/:detectionId` returns a cropped JPEG generated from the original photo and the stored detection region.
+The response contains the created session, each photo/detection result, and a summary with total photo and detection counts.
+
+## Sessions
+
+A session groups photos that belong to the same outing, weather episode, or imported batch. A session stores `name`, `location`, `observedAt`, `notes`, `source`, and `photoIds`. Photos also store their `sessionId`.
+
+A session is optional: individual catches can exist without one.
+
+## Detection regions
+
+A detection belongs to one photo. Regions use normalized `0..1` coordinates, independent of image resolution.
+
+Rectangle:
+
+```json
+{"type":"rect","x":0.05,"y":0.10,"width":0.50,"height":0.35}
+```
+
+Polygon:
+
+```json
+{
+  "type": "polygon",
+  "points": [[0.05,0.08],[0.61,0.06],[0.70,0.37],[0.18,0.48]]
+}
+```
+
+Detection status may be `proposed`, `confirmed`, or `rejected`. Only confirmed detections count toward Cloud Atlas and location progress.
+
+`GET /api/snippets/:detectionId` returns a cropped JPEG generated from the original photo and the detection region.
+
+## Lower-level photo and detection operations
+
+`POST /api/photos` stores a photo alone. It accepts `imageRef` or base64 `imageDataUrl`.
+
+`POST /api/detections` adds a detection to an existing photo. `PATCH /api/detections/:id` can correct the type, confidence, region, status, or notes.
+
+These endpoints are useful for editing, but AI clients should normally use `/api/catches` or `/api/catches/batch` for ingestion.
 
 ## Browser API
 
@@ -78,4 +166,16 @@ The web application exposes `window.cloudCatcher` for local automations running 
 
 ## Library schema
 
-The MVP uses one current schema: `photos`, `detections`, and `albums`. There is no migration/version layer yet; the model can stay simple until real persisted user data makes compatibility necessary.
+The MVP uses one current schema:
+
+```json
+{
+  "format": "cloud-catcher",
+  "sessions": [],
+  "photos": [],
+  "detections": [],
+  "albums": []
+}
+```
+
+There is no migration/version layer yet; compatibility machinery can be introduced later when there is real persisted user data worth preserving.
