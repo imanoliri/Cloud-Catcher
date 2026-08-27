@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#eaf6ff" />
+  <title>Cloud Catcher</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Cloud Catcher</p>
+      <h1>Catch the sky.</h1>
+    </div>
+    <nav>
+      <button data-view="catch" class="active">Catch</button>
+      <button data-view="atlas">Atlas</button>
+      <button data-view="data">Data</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="catch-view" class="view active"></section>
+    <section id="atlas-view" class="view"></section>
+    <section id="data-view" class="view"></section>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
