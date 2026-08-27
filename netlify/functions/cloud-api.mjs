@@ -45,7 +45,21 @@ export default async request=>{
   }
   if(resource==='detections'){
     if(request.method==='GET'){const items=id?lib.detections.find(d=>d.id===id):lib.detections;return items?json(items):json({error:'not found'},404)}
-    if(request.method==='POST'){try{const b=await request.json();if(!lib.photos.some(p=>p.id===b.photoId))return json({error:'invalid photoId'},400);const d=makeDetection(lib,b.photoId,b,types);await save(lib);return json({...d,snippetRef:`/api/snippets/${d.id}`},201)}catch(e){return json({error:e.message},400)}}
+    if(request.method==='POST'){
+      try{
+        const b=await request.json();
+        if(id==='batch'){
+          const entries=Array.isArray(b)?b:b.detections;
+          if(!Array.isArray(entries))return json({error:'detections must be an array'},400);
+          if(b.replaceSource)lib.detections=lib.detections.filter(d=>d.source!==b.replaceSource);
+          const created=[];
+          for(const entry of entries){if(!lib.photos.some(p=>p.id===entry.photoId))throw new Error(`invalid photoId: ${entry.photoId}`);created.push(makeDetection(lib,entry.photoId,entry,types))}
+          await save(lib);
+          return json({detections:created.map(d=>({...d,snippetRef:`/api/snippets/${d.id}`})),count:created.length},201)
+        }
+        if(!lib.photos.some(p=>p.id===b.photoId))return json({error:'invalid photoId'},400);const d=makeDetection(lib,b.photoId,b,types);await save(lib);return json({...d,snippetRef:`/api/snippets/${d.id}`},201)
+      }catch(e){return json({error:e.message},400)}
+    }
     if(request.method==='PATCH'&&id){const b=await request.json();const d=lib.detections.find(x=>x.id===id);if(!d)return json({error:'not found'},404);if(b.cloudTypeId!==undefined){if(!types.some(c=>c.id===b.cloudTypeId))return json({error:'invalid cloudTypeId'},400);d.cloudTypeId=b.cloudTypeId}if(b.status!==undefined){if(!validStatus(b.status))return json({error:'invalid status'},400);d.status=b.status}if(b.confidence!==undefined)d.confidence=b.confidence==null?null:clamp(b.confidence);if(b.region!==undefined)d.region=normalizeRegion(b.region);if(b.notes!==undefined)d.notes=b.notes;d.updatedAt=new Date().toISOString();await save(lib);return json({...d,snippetRef:`/api/snippets/${d.id}`})}
     if(request.method==='DELETE'&&id){lib.detections=lib.detections.filter(d=>d.id!==id);lib.albums.forEach(a=>a.detectionIds=(a.detectionIds||[]).filter(x=>x!==id));await save(lib);return json({deleted:id})}
   }
