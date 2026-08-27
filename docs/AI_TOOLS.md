@@ -1,10 +1,33 @@
 # Cloud Catcher AI Tools
 
-Cloud Catcher exposes a semantic AI-facing layer at `/ai-tools/*` on top of the lower-level REST API.
+Cloud Catcher exposes the same semantic operations through two adapters:
 
-The goal is that an AI agent can think in Cloud Catcher actions instead of HTTP implementation details.
+- `/mcp` — remote Model Context Protocol server for MCP-capable AI clients.
+- `/ai-tools/*` — simple HTTP semantic endpoints for agents that prefer ordinary REST/OpenAPI.
 
-## Tool discovery
+Both adapters sit on top of the canonical `/api/*` implementation. They do not own a separate data model.
+
+## Remote MCP
+
+Connect an MCP-capable client to:
+
+```text
+https://<cloud-catcher-host>/mcp
+```
+
+The MCP server exposes:
+
+- `import_cloud_photos`
+- `correct_detection`
+- `add_detection`
+- `get_missing_clouds`
+- `get_collection_progress`
+
+`import_cloud_photos` accepts structured photo metadata plus either `imageDataUrl` or a reachable `imageUrl` for each photo. The MCP server resolves image URLs and forwards the complete batch to Cloud Catcher's canonical ingestion API.
+
+Agents that already possess raw file bytes should prefer the multipart HTTP operation described below, because MCP tool arguments are structured data rather than arbitrary multipart file parts.
+
+## HTTP tool discovery
 
 - `GET /ai-tools` — machine-readable catalogue of available semantic tools.
 - `GET /openapi.json` — OpenAPI 3.1 description suitable for agents and API clients that can import OpenAPI operations.
@@ -13,7 +36,7 @@ The goal is that an AI agent can think in Cloud Catcher actions instead of HTTP 
 
 ### `import_cloud_photos`
 
-`POST /ai-tools/import-cloud-photos`
+HTTP: `POST /ai-tools/import-cloud-photos`
 
 Use this for the normal workflow: the user gives an AI one or many cloud images, the AI identifies cloud types and regions, then sends the whole batch in one multipart request.
 
@@ -62,25 +85,17 @@ The response contains the created session, every stored photo, every detection, 
 
 ### `correct_detection`
 
-`POST /ai-tools/correct-detection`
-
 Correct a detection after review. Supply `detectionId` plus any changed fields: `cloudTypeId`, `confidence`, `region`, `status`, or `notes`.
 
 ### `add_detection`
-
-`POST /ai-tools/add-detection`
 
 Add an extra cloud type to a photo already stored in Cloud Catcher.
 
 ### `get_missing_clouds`
 
-`GET /ai-tools/get-missing-clouds?location=San%20Sebasti%C3%A1n`
-
 Returns the Level 1 genera still missing from the user's collection, optionally scoped to a location.
 
 ### `get_collection_progress`
-
-`GET /ai-tools/get-collection-progress?location=San%20Sebasti%C3%A1n`
 
 Returns collection progress for Level 1, optionally scoped to a location.
 
@@ -93,4 +108,6 @@ Returns collection progress for Level 1, optionally scoped to a location.
 5. Report new catches and collection progress.
 6. If the user corrects an identification, call `correct_detection` rather than re-uploading the photo.
 
-The semantic tool layer is deliberately thin. It forwards to the canonical `/api/*` operations, so there is only one domain and persistence implementation.
+## ChatGPT availability
+
+Cloud Catcher is now technically ready to be connected as a remote MCP app. Whether a ChatGPT account can attach it with write actions depends on the ChatGPT plan and current custom-app availability. The MCP endpoint itself does not grant ChatGPT access; it must be added as a custom app/connector in a supported ChatGPT workspace.
