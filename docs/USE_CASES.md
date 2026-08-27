@@ -1,229 +1,64 @@
 # Cloud Catcher use cases
 
-Cloud Catcher should be understood as a small field game, learning tool, personal cloud atlas, and AI-assisted observation archive. This document describes the main user journeys the product should support and separates current MVP behavior from future directions.
+Cloud Catcher is intended to be a field game, learning tool, personal cloud atlas, and AI-assisted observation archive. This document now records **what the current MVP actually supports**, not only the intended journeys.
 
-## Core loop
+Status meanings:
 
-The central loop is:
+- **Works** — the current implementation has the main end-to-end behavior.
+- **Partial** — important pieces exist, but the user journey is incomplete or fragile.
+- **Not implemented** — keep as a future use case rather than presenting it as current behavior.
 
-1. See a cloud in the real world.
-2. Take one or more photos.
-3. Identify one or more cloud types in each photo, manually or with AI help.
-4. Store the original photo once and attach detections to regions of that photo.
-5. Add confirmed detections to the Cloud Atlas.
-6. See what cloud genera are still missing.
-7. Keep observing until a level or location collection is complete.
+## Current MVP audit
 
-The product should always make a clear distinction between a **reference example**, a **proposed identification**, and a **confirmed catch**.
+| Use case | Status | What actually works today | Main gap |
+| --- | --- | --- | --- |
+| UC1 — Learn the ten Level 1 genera | **Works** | Atlas contains all ten genera, reference photos, names, clues, and a clickable large-image viewer. Reference images are clearly labeled as examples. | Reference photos are remotely hosted; offline reference-image support is not guaranteed. |
+| UC2 — Catch a cloud manually from a photo | **Partial** | Catch screen accepts an image, location, genus, confidence and numeric crop coordinates; confirmed detections appear in the local Atlas. | This browser flow writes to local browser storage, not the hosted API, and the crop is entered numerically rather than drawn on the image. Large image collections can hit `localStorage` limits. |
+| UC3 — Identify several cloud types in one photo | **Partial** | The domain and API support many detections referencing one photo; the manual form can add another detection after saving the first. | There is no visual region editor, no overview of regions before saving, and the manual browser flow is awkward for repeated detections. |
+| UC4 — Let an AI import a batch of cloud photos | **Partial** | `/api/catches/batch` and `/ai-tools/import-cloud-photos` support one multipart batch with photos, session metadata and detections. | Cloud Catcher itself does not run image recognition. An external AI/client must inspect the images and call the endpoint. There is no in-app “analyze these photos” button yet. |
+| UC5 — Review an AI proposal | **Partial** | Proposed detections are visible, do not count toward progress, and can be corrected/confirmed/rejected through the API/domain layer. | The normal UI has no confirm/correct/reject controls. Review currently requires an API/AI client or developer-facing method. |
+| UC6 — Browse the personal Cloud Atlas | **Works** | Confirmed, proposed and missing genera are visually distinct; missing genera use reference photos; tiles open in a large viewer. | The viewer is genus-centric rather than a complete observation-detail screen. |
+| UC7 — Browse the photo journal | **Works** | Stored photos stay visible even when unclassified; detections have snippet thumbnails and labels. | No filtering, sorting, full observation viewer or editing from the journal yet. |
+| UC8 — Find what to catch next | **Partial** | Progress logic returns `missingIds`; missing genera are visible as reference cards; the AI tool can query missing genera. | There is no dedicated “what should I catch next?” UI or ranked recommendation. |
+| UC9 — Complete Level 1 | **Partial** | The domain correctly counts unique **confirmed** genera and marks Level 1 complete at 10/10. | There is no Level 2 taxonomy/unlock flow yet, so completion currently ends at the status indicator. |
+| UC10 — Build a location collection | **Partial** | Progress can be calculated per location and location cards show counts/completion. | There is no dedicated location screen, map, location normalization or merge flow for spelling variants. |
+| UC11 — Group an outing into a session | **Partial** | Sessions exist in the domain/API and batch imports can create a session containing multiple photos. | The normal UI cannot create, browse or edit sessions. |
+| UC12 — Export and restore the collection | **Partial** | The Data screen exports/imports the browser library JSON. | Hosted images are represented by URLs rather than embedded image bytes, so the exported JSON is not yet a fully self-contained backup of hosted media. Browser image storage also relies on `localStorage`. |
+| UC13 — Use Cloud Catcher through an AI/API | **Works** | REST endpoints, semantic `/ai-tools`, OpenAPI and MCP endpoints are implemented over the same hosted data model. | Actual usability depends on the external client being able to call write-capable custom APIs/MCP. The web UI does not configure clients for the user. |
 
-## MVP use cases
+## Verified implementation rules
 
-### UC1 — Learn what the ten Level 1 cloud genera look like
+The following important rules are directly implemented in the domain/API and covered by current code/tests:
 
-**Goal:** A user who knows little about clouds can browse the Level 1 Atlas and learn the basic visual differences.
+1. A single photo can contain multiple detections.
+2. Proposed detections do not advance collection progress.
+3. Level progress counts unique confirmed cloud genera.
+4. Progress can be calculated for a particular location.
+5. Sessions can group multiple photos.
+6. Detection status can be `proposed`, `confirmed`, or `rejected`.
+7. Detection regions support normalized rectangles and polygons.
+8. Hosted detections can generate cropped snippet images from the original uploaded photo.
 
-**Flow:**
-- Open the Atlas.
-- See all ten genera in a grid.
-- Uncaught genera show real reference photographs, clearly marked `Reference example — not your catch`.
-- Tap a tile to open a larger image and read the name, family, clue, and status.
+## Core loop that is genuinely usable now
 
-**Success:** The Atlas works as a compact field guide even before the user has caught anything.
+The most complete current path is:
 
-### UC2 — Catch a cloud manually from a photograph
+1. Open **Atlas** to learn the ten genera from examples.
+2. Take a cloud photo with the phone/camera app.
+3. Open **Catch** and choose the photo.
+4. Select the genus and save a confirmed detection.
+5. Add another detection if the same photo contains another genus.
+6. Open **Atlas** to see the catch replace the reference example.
+7. Use the missing reference cards/progress count to decide what to look for next.
 
-**Goal:** The user has a cloud photograph and wants to add a confirmed observation themselves.
+For larger batches, the more effective current path is an external AI/API client using `POST /api/catches/batch` rather than manual entry.
 
-**Flow:**
-- Open Catch.
-- Choose a photo.
-- Enter or confirm the location.
-- Select a cloud genus.
-- Optionally define the crop/region containing that cloud.
-- Save the detection as confirmed.
+## Important implementation caveat
 
-**Success:** The original photo is stored once, the detection is attached to it, and the matching Atlas genus uses the user's crop instead of the reference example.
+The clickable Atlas grid/lightbox was initially added to source files without copying those files into the Netlify `dist` build. This made the deploy report success while mobile users still received the older Atlas behavior. The production build now explicitly copies `atlas-viewer.js` and `atlas-viewer.css`.
 
-### UC3 — Identify several cloud types inside one photograph
+## Product principle
 
-**Goal:** A sky photograph contains more than one cloud genus.
+**Reference examples teach the user what to look for. Proposed identifications help review uncertain observations. Only confirmed real observations advance the collection.**
 
-**Flow:**
-- Upload/store the photo once.
-- Add multiple detections referencing different normalized regions of the same image.
-- Each detection may have its own genus, confidence, status, and crop.
-
-**Success:** One physical photo can contribute several individual cloud observations without duplicating the original image.
-
-### UC4 — Let an AI import a batch of cloud photos
-
-**Goal:** The user gives an AI several photos from one outing and wants Cloud Catcher populated automatically.
-
-**Flow:**
-- AI visually examines the images.
-- AI identifies cloud regions and assigns genera/confidence.
-- AI groups the images into one session when appropriate.
-- AI calls the semantic import tool or the batch REST endpoint once.
-- Uncertain detections are marked proposed; strong identifications can be confirmed.
-
-**Success:** The user can say, in effect, `Add these photos to Cloud Catcher`, without manually entering every detection.
-
-### UC5 — Review an AI proposal
-
-**Goal:** The AI thinks a cloud may be a particular genus, but the identification is uncertain.
-
-**Flow:**
-- Proposed detections are visible in the Atlas and photo journal.
-- Their actual crop is shown, but the status says `Proposed` / `Awaiting confirmation`.
-- The user or another AI can confirm, correct, or reject the detection.
-
-**Success:** Proposed detections help the user learn and review observations but do not falsely advance collection progress.
-
-### UC6 — See the personal Cloud Atlas
-
-**Goal:** The user wants a visual overview of what they have caught.
-
-**Flow:**
-- Open Atlas.
-- Browse the ten Level 1 genera in an image grid.
-- Confirmed genera display the user's own cloud crop.
-- Proposed genera display the proposed user crop with its status.
-- Missing genera display a greyed real reference photo.
-- Tap a tile to open it large.
-
-**Success:** The user can immediately distinguish caught, proposed, and missing cloud types.
-
-### UC7 — Browse the photo journal
-
-**Goal:** The user wants to inspect the original photographs rather than only the genus collection.
-
-**Flow:**
-- Open the Photo journal inside Atlas.
-- Every stored photo appears, including photos with zero detections.
-- The original filename and location remain visible.
-- Each non-rejected detection beneath the photo gets its own snippet thumbnail and label.
-
-**Success:** No stored photograph disappears merely because it is unclassified.
-
-### UC8 — Find what to catch next
-
-**Goal:** The user is outside looking at the sky and wants a simple next objective.
-
-**Flow:**
-- Cloud Catcher calculates Level 1 progress from confirmed detections.
-- Missing genera are exposed in the UI/API.
-- The user or AI can ask which cloud types are still missing.
-
-**Success:** The collection mechanic creates a reason to keep looking at the sky.
-
-### UC9 — Complete Level 1
-
-**Goal:** Catch all ten principal cloud genera.
-
-**Rule:** Only confirmed detections count.
-
-**Success:** Once all ten unique Level 1 genera have at least one confirmed detection, Level 1 is complete and the next classification level can eventually unlock.
-
-### UC10 — Build a location collection
-
-**Goal:** Complete the same cloud collection in a specific place, for example San Sebastián.
-
-**Flow:**
-- Every photo has a location.
-- Confirmed detections inherit the photo's location for progress purposes.
-- Cloud Catcher separately calculates which genera have been caught at each location.
-
-**Success:** Catching all ten Level 1 genera at one location unlocks/completes that location's Level 1 card.
-
-### UC11 — Group an outing into a session
-
-**Goal:** Keep related photos together, such as one walk, trip, storm, or afternoon of cloud watching.
-
-**Flow:**
-- Create or infer a session with shared location/date/notes.
-- Attach multiple photos to it.
-- Individual photos and detections still remain independently addressable.
-
-**Success:** The collection can later be explored by outing/weather episode as well as by genus and location.
-
-### UC12 — Export and restore the collection
-
-**Goal:** The user's observations should not be trapped in one browser or hosting provider.
-
-**Flow:**
-- Export the complete Cloud Catcher library.
-- Store the archive elsewhere.
-- Import it later into another Cloud Catcher installation/browser.
-
-**Success:** The portable library remains the canonical user-owned representation of the collection.
-
-### UC13 — Use Cloud Catcher through an AI/API rather than the UI
-
-**Goal:** An AI assistant or external application manages the user's collection.
-
-**Flow:**
-- Discover semantic tools through `/ai-tools`, `/openapi.json`, or `/mcp`.
-- Import photos, add/correct detections, query missing clouds, or retrieve progress.
-- Use lower-level `/api/*` endpoints when required.
-
-**Success:** The human UI and AI clients operate on the same domain model rather than separate collections.
-
-## Near-term use cases worth adding
-
-These fit the existing architecture but are not yet complete MVP journeys.
-
-### UC14 — Take a photo directly from a phone
-
-Open Cloud Catcher outdoors, launch the phone camera from the Catch screen, take a photo, and immediately classify/import it without first managing a file manually.
-
-### UC15 — Ask `What is this cloud?`
-
-The user uploads one image and receives AI proposals with highlighted regions, explanations, confidence, and comparison against similar genera before deciding whether to confirm them.
-
-### UC16 — Open an individual observation
-
-Tap any detection thumbnail to see the crop at full size together with the original photo, date, location, confidence, notes, review status, and other detections from the same sky.
-
-### UC17 — Explore by place
-
-Open `San Sebastián`, `Braunschweig`, or another location and see its photos, caught genera, missing genera, completed level cards, and sessions.
-
-### UC18 — Explore by outing/session
-
-Open one session and replay the sky from that outing as a chronological photo gallery with all detected cloud types.
-
-### UC19 — Correct bad AI data easily
-
-From the image viewer, change a genus, redraw a region, merge/delete duplicate detections, or mark a proposal rejected without touching JSON/API calls.
-
-### UC20 — Suggest what to look for today
-
-Combine the user's missing genera with local weather/cloud conditions and suggest realistic catches for the day, e.g. `Altocumulus is plausible this afternoon; Cirrus is also worth watching for.`
-
-## Future fractal-learning use cases
-
-### UC21 — Unlock deeper taxonomy levels
-
-After Level 1 is complete, each broad genus can open into finer species/varieties/features. The same observation model remains usable because taxonomy IDs are data-driven and hierarchical.
-
-### UC22 — Revisit old photos when a deeper level unlocks
-
-When the user learns a finer classification, existing photos can be re-examined and receive new deeper-level detections instead of requiring entirely new photographs.
-
-### UC23 — Earn nested location cards
-
-A location can have separate completion cards for Level 1, Level 2, and deeper levels, making familiar places long-running cloud-spotting challenges.
-
-### UC24 — Build a personal cloud history
-
-Over months or years, browse cloud observations by date, season, location, genus, weather episode, or rarity and see how the personal atlas grows.
-
-## Product principles implied by these use cases
-
-1. **Real observations come first.** Reference images teach; they never masquerade as catches.
-2. **One photo may contain many clouds.** Photo storage and detections remain separate concepts.
-3. **Uncertainty is visible.** Proposed and confirmed identifications are meaningfully different.
-4. **Progress is earned from confirmed real observations.** Reference examples and proposals do not complete collections.
-5. **The Atlas is both collection and field guide.** It should be useful before, during, and after an observation.
-6. **AI should reduce data entry, not create a second product.** AI and humans use the same photos, detections, sessions, taxonomy, and progress rules.
-7. **The user's collection should remain portable.** Browser storage, Netlify, Google Drive, and future providers are adapters around the same data.
+Future and incomplete journeys are tracked in [`../FUTURE.md`](../FUTURE.md).
