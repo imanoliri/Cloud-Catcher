@@ -10,7 +10,10 @@ const cors={'content-type':'application/json','access-control-allow-origin':'*',
 
 export default async request=>{
   if(request.method==='OPTIONS')return new Response('',{status:204,headers:cors});
-  const url=new URL(request.url);const path=url.pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean);const resource=path[0]||'status';const id=path[1];const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
+  const url=new URL(request.url);
+  const rawPath=url.pathname.includes('/cloud-api/')?url.pathname.split('/cloud-api/')[1]:(url.pathname.startsWith('/api/')?url.pathname.slice(5):'');
+  const path=rawPath.split('/').filter(Boolean);const resource=path[0]||'status';const id=path[1];
+  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
   if(resource==='status')return respond({name:'Cloud Catcher API',version:'1',mutationsEnabled:Boolean(process.env.CLOUD_CATCHER_API_TOKEN)});
   if(resource==='cloud-types'){const item=id?cloudTypes.find(c=>c.id===id):cloudTypes;return item?respond(item):respond({error:'not found'},404)}
   const lib=await load();
