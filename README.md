@@ -12,6 +12,8 @@ Photos from the same outing or weather episode can be grouped into a **session**
 
 The classification model is hierarchical, so later levels can split broad types into progressively finer categories without redesigning the game.
 
+See [`docs/USE_CASES.md`](docs/USE_CASES.md) for the product's concrete user journeys and the distinction between current MVP, near-term, and future fractal-learning use cases.
+
 ## AI ingestion
 
 Cloud Catcher provides both a low-level REST API and a semantic AI tool layer.
@@ -54,6 +56,7 @@ Netlify configuration lives in `netlify.toml`. The GitHub repository is connecte
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — domain boundaries, persistence, and future fractal levels
 - [`AGENTS.md`](AGENTS.md) — repository rules for coding agents
+- [`docs/USE_CASES.md`](docs/USE_CASES.md) — current and future user journeys
 - [`docs/API.md`](docs/API.md) — hosted and browser REST API contract
 - [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md) — semantic AI tool layer and recommended agent workflow
 - [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md) — Google Drive storage adapter
