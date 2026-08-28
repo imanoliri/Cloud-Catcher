@@ -73,10 +73,12 @@ test('mobile learn and quiz flows are stable',async({page})=>{
 test('mobile catch to atlas and data loop works',async({page})=>{
   await page.getByRole('button',{name:'Catch'}).click();
   await expect(page.getByRole('heading',{name:'Catch clouds from a photo'})).toBeVisible();
+  await expect(page.locator('.catch-step.current')).toHaveText(/1Photo/);
 
   await page.locator('#photo-file').setInputFiles({name:'cloud.svg',mimeType:'image/svg+xml',buffer:Buffer.from(tinySvg)});
   const selector=page.locator('.region-selector');
   await expect(selector).toBeVisible();
+  await expect(page.locator('.catch-step.current')).toHaveText(/2Select/);
   await expect(page.locator('#save-detection')).toBeDisabled();
 
   const box=await selector.boundingBox();
@@ -86,8 +88,13 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await page.mouse.move(box.x+box.width*0.75,box.y+box.height*0.7,{steps:5});
   await page.mouse.up();
 
+  await expect(page.locator('.catch-step.current')).toHaveText(/3Classify/);
+  await expect(page.locator('#save-detection')).toBeDisabled();
+  await expect(page.locator('#save-detection')).toHaveText('Choose its cloud type');
+  await page.locator('#det-type').selectOption('cumulus');
+  await expect(page.locator('.catch-step.current')).toHaveText(/4Save/);
   await expect(page.locator('#save-detection')).toBeEnabled();
-  await expect(page.locator('#save-detection')).toHaveText('Add selected cloud');
+  await expect(page.locator('#save-detection')).toHaveText('Save cloud');
 
   await page.evaluate(async()=>{
     const photo=await window.cloudCatcher.addPhoto({

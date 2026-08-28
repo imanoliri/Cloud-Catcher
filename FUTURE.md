@@ -101,6 +101,7 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - Shows caught/missing genera and completion status.
 - Shows all photos, detections and sessions at that location.
 - Supports location aliases/normalization so spelling variants do not accidentally create separate collections.
+- Atlas can switch to a place-first world-map view with catches aggregated at their recorded locations.
 
 ### F10 — Session/outing pages
 
@@ -120,6 +121,8 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - Filter by genus, location, status, date/session and confidence.
 - Sort newest/oldest and optionally by confidence.
 - Unclassified photos remain discoverable.
+- Atlas offers three first-class browsing dimensions: place (map), time (timeline grouped by day/month/year) and cloud type (all observations under each genus).
+- Every visualization links back to the underlying browsable photos and detections; maps and charts never become dead-end summaries.
 
 ### F12 — Optional Google Drive backup and synchronization
 
@@ -174,7 +177,7 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 
 ### F17 — Timeline and seasonal history
 
-Browse observations over months/years by date, season, genus, location and weather episode.
+Browse observations over months/years by date, season, genus, location and weather episode. Provide a time-first Atlas timeline that can group observations by day, month or year and open the catches within each group.
 
 ### F18 — Personal statistics
 
@@ -234,6 +237,7 @@ The application should never silently blend these datasets. External climate inf
 **Potential behavior:**
 - Read photo capture time from EXIF metadata when available.
 - Read GPS coordinates from EXIF when available and let the user confirm or correct the interpreted location.
+- When EXIF time is absent, infer common timestamp patterns from the original filename and clearly mark the value as inferred.
 - Group photos captured close together in time/place into a suggested session or weather episode.
 - Preserve explicitly entered user metadata over inferred metadata when they conflict.
 - Keep working when metadata is absent or has been stripped by messaging/social applications.

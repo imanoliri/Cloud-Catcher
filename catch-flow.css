@@ -1,0 +1,53 @@
+.catch-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .6rem;
+  padding: 0;
+  margin: 1.25rem 0 1.5rem;
+  list-style: none;
+}
+
+.catch-step {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .75rem;
+  border: 1px solid #d8e9f5;
+  border-radius: 14px;
+  color: #71879a;
+  background: #f7fbfe;
+}
+
+.catch-step span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: #dfeef8;
+  font-size: .78rem;
+}
+
+.catch-step.current {
+  border-color: #5b91b8;
+  background: #eef7fd;
+  color: #17324d;
+}
+
+.catch-step.current span {
+  background: #17324d;
+  color: #fff;
+}
+
+.catch-step.complete { color: #315f7e; }
+.catch-step.complete span { background: #dff3e8; color: #17623a; }
+
+@media (max-width: 760px) {
+  .catch-steps { gap: .35rem; }
+  .catch-step {
+    flex-direction: column;
+    gap: .3rem;
+    padding: .55rem .25rem;
+    font-size: .72rem;
+  }
+}
