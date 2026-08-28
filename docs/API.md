@@ -204,3 +204,14 @@ The MVP uses one current schema:
 ```
 
 There is no migration/version layer yet; compatibility machinery can be introduced later when there is real persisted user data worth preserving.
+
+## Browser UI/API boundary
+
+The human-facing browser app and the hosted REST API share domain concepts but are not a bidirectional synchronization system in the MVP.
+
+- **Learn** and **Quiz** are read-only practice surfaces. Answering either quiz does not create a photo/detection and does not advance progress.
+- **Catch** writes a confirmed detection into the browser library unless an external client uses the hosted API directly.
+- On load, the browser may read hosted sessions/photos/detections/albums and merge them into the current in-memory view for browsing. This does not turn local browser persistence and Netlify Blob persistence into one canonical synchronized store.
+- `window.cloudCatcher` is the supported page-level automation surface for local browser actions; `/api/*`, `/ai-tools/*`, and `/mcp` are the hosted interfaces.
+
+The deterministic browser contract for these boundaries is covered by the Playwright smoke suite documented in [`TESTING.md`](TESTING.md).
