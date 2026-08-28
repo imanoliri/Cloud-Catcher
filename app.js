@@ -75,7 +75,7 @@ function renderImageQuiz(){
   const section=document.createElement('section');
   section.id='image-quiz';
   section.className='image-quiz panel';
-  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2>Which cloud is this?</h2><p>Choose the cloud genus that best matches the picture.</p><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
+  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><div class="quiz-question-row"><h2>Which cloud is this?</h2><details class="quiz-help"><summary aria-label="Identification quiz instructions">i</summary><span class="quiz-help-popover">Choose the cloud genus that best matches the picture.</span></details></div><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
   const old=views.quiz.querySelector('#image-quiz');
   old?old.replaceWith(section):views.quiz.prepend(section);
   section.querySelectorAll('[data-image-choice]').forEach(b=>b.addEventListener('click',()=>answerImageQuiz(b.dataset.imageChoice)));
@@ -96,7 +96,7 @@ function renderDefinitionQuiz(){
   const section=document.createElement('section');
   section.id='definition-quiz';
   section.className='definition-quiz panel';
-  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2>What does ${definitionQuizCurrent.name} mean?</h2><p>Choose the definition that best matches this cloud genus.</p><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
+  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><div class="quiz-question-row"><h2>What does ${definitionQuizCurrent.name} mean?</h2><details class="quiz-help"><summary aria-label="Definition quiz instructions">i</summary><span class="quiz-help-popover">Choose the definition that best matches this cloud genus.</span></details></div><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
   const old=views.quiz.querySelector('#definition-quiz');
   old?old.replaceWith(section):views.quiz.append(section);
   section.querySelectorAll('[data-definition-choice]').forEach(b=>b.addEventListener('click',()=>answerDefinitionQuiz(b.dataset.definitionChoice)));
