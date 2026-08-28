@@ -74,6 +74,8 @@ test('mobile learn and quiz flows are stable',async({page})=>{
 });
 
 test('mobile catch to atlas and data loop works',async({page})=>{
+  const pageErrors=[];
+  page.on('pageerror',error=>pageErrors.push(error.message));
   await page.getByRole('button',{name:'Catch'}).click();
   await expect(page.getByRole('heading',{name:'Catch clouds from a photo'})).toBeVisible();
 
@@ -92,6 +94,16 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await expect(page.locator('#save-detection')).toBeEnabled();
   await expect(page.locator('#save-detection')).toHaveText('Add selected cloud');
   await page.locator('#save-detection').click();
+  await page.waitForTimeout(250);
+  const feedbackText=await page.locator('#upload-feedback').textContent();
+  if(!feedbackText?.includes('Caught!')){
+    const debug=await page.evaluate(()=>({
+      region:{x:document.querySelector('#det-x')?.value,y:document.querySelector('#det-y')?.value,width:document.querySelector('#det-w')?.value,height:document.querySelector('#det-h')?.value},
+      save:{disabled:document.querySelector('#save-detection')?.disabled,text:document.querySelector('#save-detection')?.textContent},
+      library:window.cloudCatcher?.getLibrary?.()
+    }));
+    console.log('Catch smoke debug',JSON.stringify({pageErrors,debug}));
+  }
   await expect(page.locator('#upload-feedback')).toContainText('Caught!');
 
   await page.getByRole('button',{name:'Atlas'}).click();
