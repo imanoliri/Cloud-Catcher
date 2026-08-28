@@ -49,10 +49,10 @@ function cloudGuide(){
       <h3>The main combinations</h3>
       <div class="guide-table-wrap"><table class="guide-table combination-table"><thead><tr><th>Height / growth</th><th>Layered</th><th>Puffy / heaped</th><th>Special</th></tr></thead><tbody>${rows.map(row=>`<tr>${row.map((cell,i)=>`<${i?'td':'th'}>${cell}</${i?'td':'th'}>`).join('')}</tr>`).join('')}</tbody></table></div>
     </div>
-    <div class="guide-section">
-      <h3>Know them by sight</h3>
+    <details class="guide-section guide-sight">
+      <summary>Know them by sight</summary>
       <div class="guide-cloud-grid">${LEVEL_ONE.map(c=>`<article class="guide-cloud-card"><img src="${thumbnailUrl(c.referenceImage,360)}" alt="Reference example of ${escapeHtml(c.name)}" loading="lazy" decoding="async"><div><p class="cloud-code">${c.code} · ${c.family}</p><h4>${c.name}</h4><p>${c.summary}</p><p class="guide-clue"><strong>Look for:</strong> ${c.clue}</p></div></article>`).join('')}</div>
-    </div>
+    </details>
   </section>`;
 }
 function renderLearn(){views.learn.innerHTML=cloudGuide()}
