@@ -7,6 +7,7 @@ Cloud Catcher is an offline-first cloud-identification and collection game with 
 - Keep domain logic separate from UI rendering and persistence.
 - Keep taxonomy data-driven and use stable taxonomy IDs.
 - One original photo may have many detections; never duplicate it per cloud type.
+- Persist original photos and normalized regions, not duplicate crop images. Retain a snippet only as a legacy fallback when its original is unavailable.
 - Validate mutation inputs and preserve photo/detection/session relationships.
 - Only confirmed real detections advance progress.
 - `app.js` owns Learn/Quiz rendering and top-level navigation.

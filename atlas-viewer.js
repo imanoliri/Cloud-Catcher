@@ -23,9 +23,9 @@ dialog.querySelector('.atlas-lightbox-close').addEventListener('click',close);
 dialog.addEventListener('click',event=>{if(event.target===dialog)close()});
 dialog.addEventListener('cancel',event=>{event.preventDefault();close()});
 
-function openCard(card){
-  const image=card.querySelector('.card-photo');
-  if(!image)return;
+async function openCard(card){
+  const media=card.querySelector('.card-photo');
+  if(!media)return;
   const name=card.querySelector('h3')?.textContent?.trim()||'Cloud';
   const code=card.querySelector('.cloud-code')?.textContent?.trim()||'';
   const summary=card.querySelector('.cloud-summary')?.textContent?.trim()||'';
@@ -33,7 +33,15 @@ function openCard(card){
   const proposed=card.classList.contains('proposed-card');
   const statusText=reference?'Reference example — not your catch':proposed?'Your detection — awaiting confirmation':'Your confirmed catch';
   const img=dialog.querySelector('img');
-  img.src=image.currentSrc||image.src;
+  if(media.classList.contains('crop-frame')){
+    const source=media.querySelector('img'),bounds=JSON.parse(media.dataset.crop);
+    await source.decode().catch(()=>{});
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.ceil(bounds.width*source.naturalWidth));
+    canvas.height=Math.max(1,Math.ceil(bounds.height*source.naturalHeight));
+    canvas.getContext('2d').drawImage(source,bounds.x*source.naturalWidth,bounds.y*source.naturalHeight,canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+    img.src=canvas.toDataURL('image/jpeg',.84);
+  }else img.src=media.currentSrc||media.src;
   img.alt=reference?`Reference example of ${name}`:`Your ${name} cloud catch`;
   dialog.querySelector('h2').textContent=name;
   dialog.querySelector('.atlas-lightbox-code').textContent=code;

@@ -32,19 +32,21 @@ Netlify serves the static application only. There are no deployed Functions, Blo
 
 The domain contains hierarchical cloud types, optional sessions, photos, normalized cloud detections, albums and derived collection progress. `BrowserStorageProvider` stores the complete library in IndexedDB. IndexedDB is used instead of `localStorage` because real image data quickly exceeds small string-storage quotas.
 
-On first load, a legacy `cloud-catcher-library` localStorage value is validated, saved into IndexedDB and removed. The library contains data-URL originals and snippet crops, making export/import self-contained. Browser quotas still vary, so the Data screen warns users to export backups. No automatic cross-device synchronization exists.
+On first load, a legacy `cloud-catcher-library` localStorage value is validated, saved into IndexedDB and removed. The library contains data-URL originals plus normalized crop regions, making export/import self-contained without duplicating image bytes. A stored snippet is retained only as a legacy fallback when its original is unavailable. Browser quotas still vary, so the Data screen warns users to export backups. No automatic cross-device synchronization exists.
 
 `GoogleDriveStorageProvider` demonstrates the future provider boundary but is not wired into the UI. A future Drive feature must preserve a single logical atlas, explicit ownership, conflict handling and offline operation; it must not introduce a second silently merged collection.
 
 ## Local automation API
 
-`window.cloudCatcher` is the supported integration boundary. `importCloudPhotos` accepts optional session/default metadata and multiple photos/detections, generates local crops and persists once. Smaller mutation operations support corrections and incremental classification.
+`window.cloudCatcher` is the supported integration boundary. `importCloudPhotos` accepts optional session/default metadata and multiple photos/detections and persists once. Crops are rendered locally from each original and detection region. Smaller mutation operations support corrections and incremental classification.
 
 An agent must operate through an authorized browser session or produce a Cloud Catcher JSON archive for explicit import. There is intentionally no public remote write endpoint.
 
+Backup transfer uses browser capabilities rather than a Drive API integration: supported mobile browsers open the native share sheet for exports, and imports use the native file picker. Google Drive may appear there as an installed/system provider, but Cloud Catcher receives no account-level Drive access. Unsupported share environments fall back to a download.
+
 ## Images and deployment
 
-Regions use normalized `0..1` rectangles or polygons. Snippets are derived locally, and the original is stored once regardless of detection count.
+Regions use normalized `0..1` rectangles or polygons. Crops are derived locally at render time, and the original is stored once regardless of detection count.
 
 The navigation order is **Learn → Quiz → Catch → Atlas → Data**. `app.js` owns navigation and Learn/Quiz rendering; enhancement modules augment the DOM.
 

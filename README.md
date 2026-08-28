@@ -13,9 +13,11 @@ See [`docs/USE_CASES.md`](docs/USE_CASES.md) for the audited current journeys an
 The MVP has exactly one atlas: the library stored in the current browser using IndexedDB.
 
 - Website catches and `window.cloudCatcher` automation write to that same library.
-- Photos, generated snippets, sessions, detections and albums stay on the device.
+- Original photos, crop coordinates, sessions, detections and albums stay on the device. Crops are rendered from their original photo instead of storing duplicate image bytes.
 - There is no hosted photo API, Netlify Blob store, public write endpoint or background server synchronization.
 - Data export produces a self-contained JSON backup; import restores it.
+- On supported phones, Export opens the system share/save sheet so Google Drive or another installed destination can receive the backup without OAuth. Import uses the system file picker, which can browse Drive. Other browsers fall back to a normal download.
+- Import refuses older exports that still point at the retired hosted image API, instead of silently showing a broken atlas. Recover those archives once with `npm run repair:legacy-archive -- INPUT OUTPUT --legacy-origin URL`; the repaired copy embeds each original and keeps a crop image only when its original is unavailable.
 - An existing `localStorage` library is migrated automatically to IndexedDB.
 - Optional Google Drive backup/synchronization is future work.
 
@@ -25,7 +27,7 @@ Browser data survives deployments and branch changes on the same site origin, bu
 
 The local page exposes `window.cloudCatcher`: `getLibrary`, `getCloudTypes`, `getProgress`, `importCloudPhotos`, `addPhoto`, `addDetection`, and `updateDetection`.
 
-`importCloudPhotos` accepts a session, shared defaults and multiple catches with `File`, data-URL or existing local image references. It creates all records and crops in one local operation. See [`docs/API.md`](docs/API.md) and [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md).
+`importCloudPhotos` accepts a session, shared defaults and multiple catches with `File`, data-URL or existing local image references. It creates all records in one local operation; crops are rendered from stored regions. See [`docs/API.md`](docs/API.md) and [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md).
 
 ## Develop and verify
 

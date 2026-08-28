@@ -29,8 +29,8 @@ await window.cloudCatcher.importCloudPhotos({
 });
 ```
 
-Each catch may supply `file`, `imageDataUrl`, or `imageRef`. The operation creates the optional session, photos, detections and local JPEG snippets, persists the library, and returns `{session, results, summary}`.
+Each catch may supply `file`, `imageDataUrl`, or `imageRef`. The operation creates the optional session, photos and detections, persists the library, and returns `{session, results, summary}`. Regions are stored as normalized coordinates; crop images are rendered locally from the original and are not persisted separately.
 
 ## Library ownership
 
-The portable library contains `format: "cloud-catcher"`, sessions, photos, detections and albums. The Data view exports/imports it as JSON. Images and snippets are local data URLs, so backups are self-contained. This browser library is the only live atlas; there is no Netlify Blob library to merge.
+The portable library contains `format: "cloud-catcher"`, sessions, photos, detections and albums. The Data view exports/imports it as JSON. Original images are local data URLs and detection regions are normalized coordinates, so backups are self-contained without duplicate crops. This browser library is the only live atlas; there is no Netlify Blob library to merge.

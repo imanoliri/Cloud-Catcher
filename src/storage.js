@@ -3,6 +3,22 @@ const KEY='cloud-catcher-library';
 const DB_NAME='cloud-catcher';
 const STORE_NAME='libraries';
 
+export function legacyMediaReferences(library){
+  return [...library.photos.map(photo=>photo.imageRef),...library.detections.map(detection=>detection.snippetRef)]
+    .filter(reference=>typeof reference==='string'&&/^\/api\/(images|snippets)\//.test(reference));
+}
+
+export function canonicalizeLibraryMedia(library){
+  const next=structuredClone(library);
+  const photos=new Map(next.photos.map(photo=>[photo.id,photo]));
+  next.detections=next.detections.map(detection=>{
+    if(!photos.get(detection.photoId)?.imageRef)return detection;
+    const {snippetRef,...canonical}=detection;
+    return canonical;
+  });
+  return next;
+}
+
 function openDatabase(){
   return new Promise((resolve,reject)=>{
     const request=indexedDB.open(DB_NAME,1);
@@ -24,9 +40,14 @@ async function databaseOperation(mode,operation){
 }
 export class BrowserStorageProvider{
   async loadLibrary(){const stored=await databaseOperation('readonly',store=>store.get(KEY));if(stored)return validateLibrary(stored);const legacy=localStorage.getItem(KEY);if(!legacy)return emptyLibrary();const library=validateLibrary(JSON.parse(legacy));await this.saveLibrary(library);localStorage.removeItem(KEY);return library}
-  async saveLibrary(library){const saved={...validateLibrary(library),updatedAt:new Date().toISOString()};await databaseOperation('readwrite',store=>store.put(saved,KEY));return saved}
-  async exportArchive(library){return new Blob([JSON.stringify(library,null,2)],{type:'application/json'})}
-  async importArchive(file){return validateLibrary(JSON.parse(await file.text()))}
+  async saveLibrary(library){const saved={...canonicalizeLibraryMedia(validateLibrary(library)),updatedAt:new Date().toISOString()};await databaseOperation('readwrite',store=>store.put(saved,KEY));return saved}
+  async exportArchive(library){return new Blob([JSON.stringify(canonicalizeLibraryMedia(validateLibrary(library)),null,2)],{type:'application/json'})}
+  async importArchive(file){
+    const library=canonicalizeLibraryMedia(validateLibrary(JSON.parse(await file.text())));
+    const legacyReferences=legacyMediaReferences(library);
+    if(legacyReferences.length)throw new Error(`This is a legacy Cloud Catcher export with ${legacyReferences.length} hosted image references. Repair the archive first so its images are embedded, then import the repaired JSON.`);
+    return library;
+  }
 }
 export class GoogleDriveStorageProvider{
   constructor({accessToken,folderId=null}){this.accessToken=accessToken;this.folderId=folderId;this.filename='cloud-catcher-library.json'}
