@@ -7,8 +7,15 @@ const views={learn:document.querySelector('#learn-view'),quiz:document.querySele
 let activeView='learn';
 let library=null;
 let pendingImage=null;
+let imageQuizCurrent=null;
+let imageQuizExampleIndex=0;
+let imageQuizAnswered=false;
+let definitionQuizCurrent=null;
+let definitionQuizAnswered=false;
 
 const escapeHtml=(v='')=>String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
+const shuffle=a=>[...a].sort(()=>Math.random()-.5);
+const learnExamples=type=>type.referenceImages?.length?type.referenceImages:[{image:type.referenceImage,page:type.referencePage}];
 const fileDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
 const imageSize=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});img.onerror=reject;img.src=src});
 const thumbnailUrl=(src,width=220)=>src.replace(/([?&])width=\d+/i,`$1width=${width}`);
@@ -49,7 +56,65 @@ function cloudGuide(){
   </section>`;
 }
 function renderLearn(){views.learn.innerHTML=cloudGuide()}
+
+function chooseImageQuizQuestion(){
+  imageQuizCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];
+  const examples=learnExamples(imageQuizCurrent);
+  imageQuizExampleIndex=Math.floor(Math.random()*examples.length);
+  imageQuizAnswered=false;
+}
+function chooseDefinitionQuizQuestion(){
+  definitionQuizCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];
+  definitionQuizAnswered=false;
+}
+function renderImageQuiz(){
+  if(!imageQuizCurrent)chooseImageQuizQuestion();
+  const examples=learnExamples(imageQuizCurrent);
+  const example=examples[imageQuizExampleIndex];
+  const choices=shuffle([imageQuizCurrent,...shuffle(LEVEL_ONE.filter(c=>c.id!==imageQuizCurrent.id)).slice(0,3)]);
+  const section=document.createElement('section');
+  section.id='image-quiz';
+  section.className='image-quiz panel';
+  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2>Which cloud is this?</h2><p>Choose the cloud genus that best matches the picture.</p><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
+  const old=views.quiz.querySelector('#image-quiz');
+  old?old.replaceWith(section):views.quiz.prepend(section);
+  section.querySelectorAll('[data-image-choice]').forEach(b=>b.addEventListener('click',()=>answerImageQuiz(b.dataset.imageChoice)));
+}
+function answerImageQuiz(id){
+  if(imageQuizAnswered)return;
+  imageQuizAnswered=true;
+  const correct=id===imageQuizCurrent.id;
+  const feedback=views.quiz.querySelector('#image-feedback');
+  if(!feedback)return;
+  feedback.innerHTML=`<div class="feedback"><strong>${correct?'Correct!':'Not quite.'}</strong> This is <b>${imageQuizCurrent.name}</b>. ${imageQuizCurrent.clue}<div class="toolbar"><button id="image-next" class="primary" type="button">Next cloud</button></div></div>`;
+  views.quiz.querySelectorAll('[data-image-choice]').forEach(b=>b.disabled=true);
+  views.quiz.querySelector('#image-next')?.addEventListener('click',()=>{chooseImageQuizQuestion();renderImageQuiz()});
+}
+function renderDefinitionQuiz(){
+  if(!definitionQuizCurrent)chooseDefinitionQuizQuestion();
+  const choices=shuffle([definitionQuizCurrent,...shuffle(LEVEL_ONE.filter(c=>c.id!==definitionQuizCurrent.id)).slice(0,3)]);
+  const section=document.createElement('section');
+  section.id='definition-quiz';
+  section.className='definition-quiz panel';
+  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2>What does ${definitionQuizCurrent.name} mean?</h2><p>Choose the definition that best matches this cloud genus.</p><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
+  const old=views.quiz.querySelector('#definition-quiz');
+  old?old.replaceWith(section):views.quiz.append(section);
+  section.querySelectorAll('[data-definition-choice]').forEach(b=>b.addEventListener('click',()=>answerDefinitionQuiz(b.dataset.definitionChoice)));
+}
+function answerDefinitionQuiz(id){
+  if(definitionQuizAnswered)return;
+  definitionQuizAnswered=true;
+  const correct=id===definitionQuizCurrent.id;
+  const feedback=views.quiz.querySelector('#definition-feedback');
+  if(!feedback)return;
+  feedback.innerHTML=`<div class="feedback"><strong>${correct?'Correct!':'Not quite.'}</strong> <b>${definitionQuizCurrent.name}</b>: ${definitionQuizCurrent.summary}<div class="toolbar"><button id="definition-next" class="primary" type="button">Next definition</button></div></div>`;
+  views.quiz.querySelectorAll('[data-definition-choice]').forEach(b=>{b.disabled=true;if(b.dataset.definitionChoice===definitionQuizCurrent.id)b.classList.add('correct-choice');else if(b.dataset.definitionChoice===id)b.classList.add('wrong-choice')});
+  views.quiz.querySelector('#definition-next')?.addEventListener('click',()=>{chooseDefinitionQuizQuestion();renderDefinitionQuiz()});
+}
+function renderQuiz(){renderImageQuiz();renderDefinitionQuiz()}
+
 renderLearn();
+renderQuiz();
 
 async function mergeHostedLibrary(local){
   try{
@@ -73,7 +138,7 @@ document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click
 
 function renderActive(){
   if(activeView==='learn')renderLearn();
-  if(activeView==='quiz')window.dispatchEvent(new CustomEvent('cloud-catcher:quiz-active'));
+  if(activeView==='quiz')renderQuiz();
   if(activeView==='catch')renderCatch();
   if(activeView==='atlas')renderAtlas();
   if(activeView==='data')renderData();
