@@ -170,7 +170,7 @@ function renderDefinitionQuiz(){
   const section=document.createElement('section');
   section.id='definition-quiz';
   section.className='definition-quiz panel';
-  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does ${definitionQuizCurrent.name} mean? <span class="quiz-help" role="button" tabindex="0" aria-label="Definition quiz instructions" aria-expanded="false" data-tooltip="Choose the definition that best matches this cloud genus.">ℹ️</span></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
+  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does "${definitionQuizCurrent.name}" mean? <span class="quiz-help" role="button" tabindex="0" aria-label="Definition quiz instructions" aria-expanded="false" data-tooltip="Choose the definition that best matches this cloud genus.">ℹ️</span></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
   const old=views.quiz.querySelector('#definition-quiz');
   old?old.replaceWith(section):views.quiz.append(section);
   wireQuizHelp(section);
