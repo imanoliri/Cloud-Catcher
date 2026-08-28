@@ -5,6 +5,12 @@ let active=null;
 function clamp(v){return Math.max(0,Math.min(1,v))}
 function setField(id,value){const input=document.querySelector(id);if(input)input.value=String(Math.round(value*1000)/10)}
 function syncRegion(region){setField('#det-x',region.x);setField('#det-y',region.y);setField('#det-w',region.width);setField('#det-h',region.height)}
+function updateSaveState(){
+  if(!active)return;
+  const classified=Boolean(active.type.value);
+  active.save.disabled=!active.valid||!classified;
+  active.save.textContent=!active.valid?'Select a cloud region first':classified?'Save cloud':'Choose its cloud type';
+}
 
 function clearSelection(message='Drag over a cloud to select the next region.'){
   if(!active)return;
@@ -12,7 +18,7 @@ function clearSelection(message='Drag over a cloud to select the next region.'){
   active.selection.style.cssText='';
   active.valid=false;
   syncRegion({x:0,y:0,width:0,height:0});
-  if(active.save){active.save.disabled=true;active.save.textContent='Select a cloud region first'}
+  updateSaveState();
   active.help.textContent=message;
 }
 
@@ -34,7 +40,8 @@ function setupSelector(){
   const image=catchView.querySelector('#photo-preview img.photo-preview');
   const fieldset=catchView.querySelector('fieldset');
   const save=catchView.querySelector('#save-detection');
-  if(!image||!fieldset||!save||image.dataset.regionSelector==='true')return;
+  const type=catchView.querySelector('#det-type');
+  if(!image||!fieldset||!save||!type||image.dataset.regionSelector==='true')return;
   image.dataset.regionSelector='true';
   fieldset.classList.add('region-numeric-fallback');
   fieldset.setAttribute('aria-hidden','true');
@@ -56,9 +63,9 @@ function setupSelector(){
   help.textContent='Drag over a cloud to select the region you want to classify.';
   shell.insertAdjacentElement('afterend',help);
 
-  save.disabled=true;
-  save.textContent='Select a cloud region first';
-  active={shell,selection,help,save,valid:false,start:null,pointerId:null};
+  active={shell,selection,help,save,type,valid:false,start:null,pointerId:null};
+  updateSaveState();
+  type.addEventListener('change',updateSaveState);
   syncRegion({x:0,y:0,width:0,height:0});
 
   shell.addEventListener('pointerdown',event=>{
@@ -92,8 +99,7 @@ function setupSelector(){
     if(region.width<.025||region.height<.025){clearSelection('That selection was too small. Drag a box around the cloud you want to classify.');return}
     active.valid=true;
     drawSelection(region);syncRegion(region);
-    active.save.disabled=false;
-    active.save.textContent='Add selected cloud';
+    updateSaveState();
     active.help.textContent='Selected region ready. Choose its cloud type, then add it. Drag again to replace the selection.';
     event.preventDefault();
   }
@@ -102,9 +108,6 @@ function setupSelector(){
 }
 
 new MutationObserver(()=>setupSelector()).observe(catchView,{childList:true,subtree:true});
-new MutationObserver(()=>{
-  const feedback=catchView.querySelector('#upload-feedback');
-  if(feedback?.textContent?.includes('Caught!'))clearSelection('Caught. Drag over another cloud in this same photo to add another region.');
-}).observe(catchView,{childList:true,subtree:true,characterData:true});
+window.addEventListener('cloud-catcher-saved',()=>clearSelection('Caught. Drag over another cloud in this same photo to add another region.'));
 
 setupSelector();
