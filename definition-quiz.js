@@ -1,6 +1,6 @@
 import { LEVEL_ONE } from './src/taxonomy.js';
 
-const learnView = document.querySelector('#learn-view');
+const quizView = document.querySelector('#quiz-view');
 let current = null;
 let answered = false;
 
@@ -16,10 +16,10 @@ function definitionFor(type) {
 }
 
 function renderQuiz() {
-  if (!learnView) return;
+  if (!quizView) return;
   if (!current) chooseQuestion();
 
-  const existing = learnView.querySelector('#definition-quiz');
+  const existing = quizView.querySelector('#definition-quiz');
   if (existing) return;
 
   const choices = shuffle([
@@ -42,7 +42,7 @@ function renderQuiz() {
     <div id="definition-feedback" aria-live="polite"></div>
   `;
 
-  learnView.append(section);
+  quizView.append(section);
   section.querySelectorAll('[data-definition-choice]').forEach(button => {
     button.addEventListener('click', () => answer(button.dataset.definitionChoice));
   });
@@ -52,7 +52,7 @@ function answer(id) {
   if (answered) return;
   answered = true;
   const correct = id === current.id;
-  const feedback = learnView.querySelector('#definition-feedback');
+  const feedback = quizView.querySelector('#definition-feedback');
   if (!feedback) return;
 
   feedback.innerHTML = `
@@ -63,24 +63,17 @@ function answer(id) {
     </div>
   `;
 
-  learnView.querySelectorAll('[data-definition-choice]').forEach(button => {
+  quizView.querySelectorAll('[data-definition-choice]').forEach(button => {
     button.disabled = true;
     if (button.dataset.definitionChoice === current.id) button.classList.add('correct-choice');
     else if (button.dataset.definitionChoice === id) button.classList.add('wrong-choice');
   });
 
-  learnView.querySelector('#definition-next')?.addEventListener('click', () => {
-    learnView.querySelector('#definition-quiz')?.remove();
+  quizView.querySelector('#definition-next')?.addEventListener('click', () => {
+    quizView.querySelector('#definition-quiz')?.remove();
     chooseQuestion();
     renderQuiz();
   });
 }
 
-const observer = new MutationObserver(() => {
-  if (learnView.classList.contains('active')) renderQuiz();
-});
-
-if (learnView) {
-  observer.observe(learnView, { childList: true });
-  renderQuiz();
-}
+if (quizView) renderQuiz();
