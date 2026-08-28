@@ -12,7 +12,7 @@ Status meanings:
 
 | Use case | Status | What actually works today | Main gap |
 | --- | --- | --- | --- |
-| UC1 — Learn the ten Level 1 genera | **Works** | Atlas contains all ten genera, reference photos, names, clues, and a clickable large-image viewer. Reference images are clearly labeled as examples. | Reference photos are remotely hosted; offline reference-image support is not guaranteed. |
+| UC1 — Learn and practice the ten Level 1 genera | **Works** | Learn explains cloud formation, name parts, altitude/form combinations and reference examples. **Know them by sight** is collapsed by default. Quiz provides image → genus and genus → definition practice, including tap/hover help and non-shifting answer feedback. | Reference photos/diagrams are remotely hosted; offline reference-image support is not guaranteed. Quiz has no score/history or spaced repetition yet. |
 | UC2 — Catch a cloud manually from a photo | **Partial** | Catch accepts an image, location, genus and confidence. The user drags directly over the photo with touch or mouse to select the cloud region; normalized coordinates are stored automatically and the confirmed crop appears in the Atlas. | This browser flow writes to local browser storage rather than the hosted API, and large image collections can hit `localStorage` limits. |
 | UC3 — Identify several cloud types in one photo | **Works** | One photo remains loaded after a detection is saved. The selection clears, and the user can repeatedly select another region, classify it and save it. Every detection references the same original photo and stores its own normalized region. | Existing saved regions are not yet drawn together on the editor, and saved regions cannot yet be resized visually. |
 | UC4 — Let an AI import a batch of cloud photos | **Partial** | `/api/catches/batch` and `/ai-tools/import-cloud-photos` support one multipart batch with photos, session metadata and detections. | Cloud Catcher itself does not run image recognition. An external AI/client must inspect the images and call the endpoint. There is no in-app “analyze these photos” button yet. |
@@ -40,18 +40,23 @@ The following important rules are directly implemented in the domain/API and cov
 8. Hosted detections can generate cropped snippet images from the original uploaded photo.
 9. The manual Catch flow maps touch/mouse rectangle gestures to normalized detection coordinates.
 10. After saving one region, the same original image stays active so additional regions can be caught without re-uploading it.
+11. Learn and Quiz practice do not create catches or change collection progress.
+12. Quiz result feedback overlays the answer area and does not push the image or following layout downward.
+13. The **Know them by sight** reference section starts collapsed and expands on demand.
 
 ## Core loop that is genuinely usable now
 
-1. Open **Atlas** to learn the ten genera from examples.
-2. Take a cloud photo with the phone/camera app.
-3. Open **Catch** and choose the photo.
-4. Drag a rectangle around one cloud or cloud region in the photo.
-5. Choose the genus and save that selected region as a confirmed catch.
-6. If the same image contains another cloud, drag over the next region and classify it separately.
-7. Repeat as many times as useful on that same original image.
-8. Open **Atlas** to see confirmed crops replace reference examples.
-9. Use the missing reference cards/progress count to decide what to look for next.
+1. Open **Learn** for the Level 1 theory/reference guide.
+2. Use **Quiz** to practice image recognition and definitions without affecting progress.
+3. Take a cloud photo with the phone/camera app.
+4. Open **Catch** and choose the photo.
+5. Drag a rectangle around one cloud or cloud region in the photo.
+6. Choose the genus and save that selected region as a confirmed catch.
+7. If the same image contains another cloud, drag over the next region and classify it separately.
+8. Repeat as many times as useful on that same original image.
+9. Open **Atlas** to see confirmed crops replace reference examples.
+10. Use the missing reference cards/progress count to decide what to look for next.
+11. Use **Data** when you want to export/import the portable browser library.
 
 For larger batches, the more effective current path is an external AI/API client using `POST /api/catches/batch` rather than manual entry.
 
@@ -60,3 +65,7 @@ For larger batches, the more effective current path is an external AI/API client
 **One original photo may contain many independently classified regions. Reference examples teach the user what to look for. Proposed identifications help review uncertain observations. Only confirmed real observations advance the collection.**
 
 Future and incomplete journeys are tracked in [`../FUTURE.md`](../FUTURE.md).
+
+## Deterministic smoke-test coverage
+
+The current mobile Playwright suite verifies the main pre-merge journeys against the built static site: Learn layout/collapse behavior, Quiz navigation/tooltips/quotes/option spacing/non-shifting feedback, Catch region selection and save, Atlas progress, and Data availability. See [`TESTING.md`](TESTING.md) for the exact contract.
