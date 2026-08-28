@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 
-const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z0l8AAAAASUVORK5CYII=','base64');
+const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAGQAAABLCAIAAAAJerXgAAAAuklEQVR4nO3QQQ3AIADAQMC/nClBBDpmYX2RJXcKms5nn8E363bAn5gVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVvMi/AwJWD8m6AAAAAElFTkSuQmCC','base64');
 const tinySvg='<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"><rect width="120" height="90" fill="#dcecf7"/></svg>';
 
 test.beforeEach(async({page})=>{
