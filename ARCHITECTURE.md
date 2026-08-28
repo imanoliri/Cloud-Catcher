@@ -1,0 +1,51 @@
+# Architecture
+
+Cloud Catcher is an offline-first static web application with one private browser-local atlas and a portable domain model.
+
+## Invariants
+
+1. Domain logic is independent of rendering and persistence.
+2. The taxonomy is data-driven and uses stable IDs.
+3. One photo may own many normalized cloud detections.
+4. Only confirmed detections count toward collection progress.
+5. Human UI and browser automation mutate the same library.
+6. The MVP never uploads personal photos or atlas records to Cloud Catcher's hosting.
+7. Exported JSON is the portable user-owned data contract.
+
+## Layers
+
+```text
+Human UI        Browser/AI automation
+    \                 /
+     Browser application
+              |
+        Domain model
+              |
+ BrowserStorageProvider (IndexedDB)
+              |
+       Export / import JSON
+```
+
+Netlify serves the static application only. There are no deployed Functions, Blob-backed records, image endpoints, REST mutations or MCP server in the MVP.
+
+## Domain and persistence
+
+The domain contains hierarchical cloud types, optional sessions, photos, normalized cloud detections, albums and derived collection progress. `BrowserStorageProvider` stores the complete library in IndexedDB. IndexedDB is used instead of `localStorage` because real image data quickly exceeds small string-storage quotas.
+
+On first load, a legacy `cloud-catcher-library` localStorage value is validated, saved into IndexedDB and removed. The library contains data-URL originals and snippet crops, making export/import self-contained. Browser quotas still vary, so the Data screen warns users to export backups. No automatic cross-device synchronization exists.
+
+`GoogleDriveStorageProvider` demonstrates the future provider boundary but is not wired into the UI. A future Drive feature must preserve a single logical atlas, explicit ownership, conflict handling and offline operation; it must not introduce a second silently merged collection.
+
+## Local automation API
+
+`window.cloudCatcher` is the supported integration boundary. `importCloudPhotos` accepts optional session/default metadata and multiple photos/detections, generates local crops and persists once. Smaller mutation operations support corrections and incremental classification.
+
+An agent must operate through an authorized browser session or produce a Cloud Catcher JSON archive for explicit import. There is intentionally no public remote write endpoint.
+
+## Images and deployment
+
+Regions use normalized `0..1` rectangles or polygons. Snippets are derived locally, and the original is stored once regardless of detection count.
+
+The navigation order is **Learn → Quiz → Catch → Atlas → Data**. `app.js` owns navigation and Learn/Quiz rendering; enhancement modules augment the DOM.
+
+`npm run build` copies referenced browser assets to `dist`. Netlify deploys only that static directory. Deterministic Node and mobile Playwright tests verify domain behavior, local persistence and the absence of server persistence configuration.

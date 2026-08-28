@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#eaf6ff" />
+  <title>Cloud Catcher</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/atlas-viewer.css" />
+  <link rel="stylesheet" href="/region-selector.css" />
+  <link rel="stylesheet" href="/learn-mode.css?v=collapse-sight-3" />
+  <link rel="stylesheet" href="/definition-quiz.css?v=ui-fix-3" />
+  <link rel="stylesheet" href="/quiz-page.css?v=result-overlay-1" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Cloud Catcher</p>
+      <h1>Catch the sky.</h1>
+    </div>
+    <nav>
+      <button data-view="learn" class="active">Learn</button>
+      <button data-view="quiz">Quiz</button>
+      <button data-view="catch">Catch</button>
+      <button data-view="atlas">Atlas</button>
+      <button data-view="data">Data</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="learn-view" class="view active"></section>
+    <section id="quiz-view" class="view"></section>
+    <section id="catch-view" class="view"></section>
+    <section id="atlas-view" class="view"></section>
+    <section id="data-view" class="view"></section>
+  </main>
+
+  <script type="module" src="/app.js?v=collapse-sight-1"></script>
+  <script type="module" src="/cloud-diagrams.js"></script>
+  <script type="module" src="/atlas-viewer.js"></script>
+  <script type="module" src="/region-selector.js"></script>
+</body>
+</html>
