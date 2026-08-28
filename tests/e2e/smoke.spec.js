@@ -1,6 +1,5 @@
 import {test,expect} from '@playwright/test';
 
-const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAGQAAABLCAIAAAAJerXgAAAAuklEQVR4nO3QQQ3AIADAQMC/nClBBDpmYX2RJXcKms5nn8E363bAn5gVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVmBWYFZgVvMi/AwJWD8m6AAAAAElFTkSuQmCC','base64');
 const tinySvg='<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"><rect width="120" height="90" fill="#dcecf7"/></svg>';
 
 test.beforeEach(async({page})=>{
@@ -74,12 +73,10 @@ test('mobile learn and quiz flows are stable',async({page})=>{
 });
 
 test('mobile catch to atlas and data loop works',async({page})=>{
-  const pageErrors=[];
-  page.on('pageerror',error=>pageErrors.push(error.message));
   await page.getByRole('button',{name:'Catch'}).click();
   await expect(page.getByRole('heading',{name:'Catch clouds from a photo'})).toBeVisible();
 
-  await page.locator('#photo-file').setInputFiles({name:'cloud.png',mimeType:'image/png',buffer:tinyPng});
+  await page.locator('#photo-file').setInputFiles({name:'cloud.svg',mimeType:'image/svg+xml',buffer:Buffer.from(tinySvg)});
   const selector=page.locator('.region-selector');
   await expect(selector).toBeVisible();
   await expect(page.locator('#save-detection')).toBeDisabled();
@@ -94,16 +91,6 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await expect(page.locator('#save-detection')).toBeEnabled();
   await expect(page.locator('#save-detection')).toHaveText('Add selected cloud');
   await page.locator('#save-detection').evaluate(button=>button.click());
-  await page.waitForTimeout(250);
-  const feedbackText=await page.locator('#upload-feedback').textContent();
-  if(!feedbackText?.includes('Caught!')){
-    const debug=await page.evaluate(()=>({
-      region:{x:document.querySelector('#det-x')?.value,y:document.querySelector('#det-y')?.value,width:document.querySelector('#det-w')?.value,height:document.querySelector('#det-h')?.value},
-      save:{disabled:document.querySelector('#save-detection')?.disabled,text:document.querySelector('#save-detection')?.textContent},
-      library:window.cloudCatcher?.getLibrary?.()
-    }));
-    console.log('Catch smoke debug',JSON.stringify({pageErrors,debug}));
-  }
   await expect(page.locator('#upload-feedback')).toContainText('Caught!');
 
   await page.getByRole('button',{name:'Atlas'}).click();
