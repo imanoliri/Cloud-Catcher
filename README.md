@@ -1,75 +1,49 @@
 # Cloud Catcher
 
-A cloud-spotting game where you catch, identify, and collect real clouds, unlocking increasingly detailed classifications and location-based collections.
+A mobile-first cloud-spotting game where the user learns, catches, identifies and collects real clouds.
 
 ## MVP
 
-Cloud Catcher starts with Level 1: the ten principal cloud genera. The mobile flow is **Learn → Quiz → Catch → Atlas → Data**. Learn contains the theory/reference material; Quiz has image-identification and definition practice that never changes collection progress. A real photo is stored once and can contain several cloud detections. Each confirmed detection can unlock its own Cloud Atlas card, while detections inherit the photo's location and date.
+Level 1 contains the ten principal cloud genera. The flow is **Learn → Quiz → Catch → Atlas → Data**. One original photo may contain several independently selected cloud regions. Confirmed detections unlock atlas and location progress; quizzes never change collection progress.
 
-Completing all ten genera completes the Level 1 collection; catching all ten in the same place also completes a location card for that place.
+See [`docs/USE_CASES.md`](docs/USE_CASES.md) for the audited current journeys and [`FUTURE.md`](FUTURE.md) for later work.
 
-Photos from the same outing or weather episode can be grouped into a **session**, for example `San Sebastián sky — 27 Aug 2026`.
+## One private atlas
 
-The classification model is hierarchical, so later levels can split broad types into progressively finer categories without redesigning the game.
+The MVP has exactly one atlas: the library stored in the current browser using IndexedDB.
 
-See [`docs/USE_CASES.md`](docs/USE_CASES.md) for an audit of what the current MVP actually supports. Unsupported and incomplete journeys are tracked in [`FUTURE.md`](FUTURE.md).
+- Website catches and `window.cloudCatcher` automation write to that same library.
+- Photos, generated snippets, sessions, detections and albums stay on the device.
+- There is no hosted photo API, Netlify Blob store, public write endpoint or background server synchronization.
+- Data export produces a self-contained JSON backup; import restores it.
+- An existing `localStorage` library is migrated automatically to IndexedDB.
+- Optional Google Drive backup/synchronization is future work.
 
-## AI ingestion
+Browser data survives deployments and branch changes on the same site origin, but clearing site data or changing browsers/devices requires an export/import until Drive sync exists.
 
-Cloud Catcher provides both a low-level REST API and a semantic AI tool layer.
+## Browser automation API
 
-- `POST /api/catches/batch` is the canonical batch-ingestion API.
-- `POST /ai-tools/import-cloud-photos` is the agent-friendly semantic tool for the same operation.
-- One multipart request can carry many actual image files plus one metadata JSON field describing the session and all detections.
-- `correct_detection`, `add_detection`, `get_missing_clouds`, and `get_collection_progress` are exposed through `/ai-tools/*`.
-- `GET /ai-tools` provides machine-readable tool discovery.
-- `GET /openapi.json` publishes an OpenAPI 3.1 description that compatible AI/API clients can import.
+The local page exposes `window.cloudCatcher`: `getLibrary`, `getCloudTypes`, `getProgress`, `importCloudPhotos`, `addPhoto`, `addDetection`, and `updateDetection`.
 
-The semantic tool layer is only an adapter over the canonical REST/domain implementation; it does not duplicate storage or game logic.
+`importCloudPhotos` accepts a session, shared defaults and multiple catches with `File`, data-URL or existing local image references. It creates all records and crops in one local operation. See [`docs/API.md`](docs/API.md) and [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md).
 
-The MVP API is intentionally open for reads and writes; there is no authentication layer yet.
-
-See [`docs/API.md`](docs/API.md) for the complete REST contract and [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md) for AI-agent integration.
-
-## Data ownership
-
-Cloud Catcher is offline-first and portable by design. Browser progress is stored locally, and the Data screen can export or import the complete Cloud Catcher library as JSON. The same schema is used by storage adapters, including Google Drive.
-
-Hosted API images and library data are stored in the global Netlify Blob store so catches survive deploy-preview updates and the eventual merge to production.
-
-## Run locally
+## Develop and verify
 
 ```bash
 npm install
 npm run dev
+npm run test:all
 ```
 
-## Test
-
-```bash
-npm test
-npx playwright install chromium
-npm run test:smoke
-```
-
-`npm run test:all` runs the unit tests followed by the deterministic mobile Playwright smoke suite. CI runs unit tests, the production static build, and the same smoke tests for pull requests and `main`. See [`docs/TESTING.md`](docs/TESTING.md).
-
-## Build and deploy
-
-```bash
-npm run build
-```
-
-Netlify configuration lives in `netlify.toml`. The GitHub repository is connected to the Netlify project `cloud-catcher-game`, with `main` as production and pull requests deployed as previews.
+`npm run build` creates the static `dist` artifact deployed by Netlify. Pull requests receive Deploy Previews, but Netlify hosts only static application assets—not user atlas data.
 
 ## Documentation
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — domain boundaries, persistence, and future fractal levels
-- [`AGENTS.md`](AGENTS.md) — repository rules for coding agents
-- [`docs/USE_CASES.md`](docs/USE_CASES.md) — audited current user journeys and implementation status
-- [`FUTURE.md`](FUTURE.md) — future/incomplete user journeys and acceptance criteria
-- [`docs/API.md`](docs/API.md) — hosted and browser REST API contract
-- [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md) — semantic AI tool layer and recommended agent workflow
-- [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md) — Google Drive storage adapter
-- [`docs/TESTING.md`](docs/TESTING.md) — deterministic pre-merge verification and smoke-test coverage
-- [`openapi.json`](openapi.json) — machine-readable OpenAPI tool description
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`AGENTS.md`](AGENTS.md)
+- [`docs/USE_CASES.md`](docs/USE_CASES.md)
+- [`FUTURE.md`](FUTURE.md)
+- [`docs/API.md`](docs/API.md)
+- [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md)
+- [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md)
+- [`docs/TESTING.md`](docs/TESTING.md)

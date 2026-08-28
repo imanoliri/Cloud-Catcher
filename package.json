@@ -5,17 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "build": "mkdir -p dist/src && cp index.html styles.css app.js atlas-viewer.js atlas-viewer.css region-selector.js region-selector.css learn-mode.css cloud-diagrams.js definition-quiz.css quiz-page.css openapi.json dist/ && cp src/*.js dist/src/",
+    "build": "mkdir -p dist/src && cp index.html styles.css app.js atlas-viewer.js atlas-viewer.css region-selector.js region-selector.css learn-mode.css cloud-diagrams.js definition-quiz.css quiz-page.css dist/ && cp src/*.js dist/src/",
     "test": "node --test tests/*.test.js",
     "test:smoke": "playwright test",
     "test:all": "npm test && npm run test:smoke"
   },
-  "dependencies": {
-    "@modelcontextprotocol/server": "^2.0.0",
-    "@netlify/blobs": "^9.1.0",
-    "sharp": "^0.34.3",
-    "zod": "^4.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "netlify-cli": "^23.6.0",
     "@playwright/test": "1.55.0"

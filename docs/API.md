@@ -1,217 +1,36 @@
-# Cloud Catcher API
+# Browser API
 
-Cloud Catcher exposes the same domain concepts to humans and AI clients. The hosted API is served by Netlify Functions and stores library data and uploaded images in Netlify Blobs.
+Cloud Catcher has no hosted REST API in the browser-local MVP. The supported programmatic interface is `window.cloudCatcher` in an open Cloud Catcher page. Every mutation writes to the same IndexedDB library used by the UI.
 
-The MVP API is intentionally open for reads and writes. It has no authentication layer yet.
+## Operations
 
-## Recommended AI workflow
+- `getLibrary()` returns a structured clone of the complete library.
+- `getCloudTypes()` returns the Level 1 taxonomy.
+- `getProgress(location?)` returns confirmed Level 1 progress.
+- `addPhoto(data)` and `addDetection(data)` perform incremental local mutations.
+- `updateDetection(id, patch)` corrects an existing detection.
 
-For normal AI ingestion, prefer `POST /api/catches`. It stores one photo plus all cloud detections found in that photo in one request.
+### `importCloudPhotos(batch)`
 
-For an outing or imported photo batch, prefer `POST /api/catches/batch` with `multipart/form-data`. One request carries all image files plus one JSON metadata part describing the session, shared metadata, and detections.
-
-The lower-level `/photos` and `/detections` endpoints remain available for editing or incremental workflows.
-
-## Endpoints
-
-- `GET /api/status`
-- `GET /api/cloud-types`
-- `GET /api/cloud-types/:id`
-- `GET /api/sessions`
-- `GET /api/sessions/:id`
-- `POST /api/sessions`
-- `POST /api/catches`
-- `POST /api/catches/batch`
-- `GET /api/photos`
-- `GET /api/photos/:id`
-- `POST /api/photos`
-- `DELETE /api/photos/:id`
-- `GET /api/detections`
-- `GET /api/detections/:id`
-- `POST /api/detections`
-- `PATCH /api/detections/:id`
-- `DELETE /api/detections/:id`
-- `GET /api/images/:photoId`
-- `GET /api/snippets/:detectionId`
-- `GET /api/albums`
-- `GET /api/albums/:id`
-- `POST /api/albums`
-- `PATCH /api/albums/:id`
-- `GET /api/progress?location=San%20Sebasti%C3%A1n`
-
-## Create one complete catch
-
-`POST /api/catches`
-
-```json
-{
-  "location": "San Sebastián",
-  "observedAt": "2026-08-27T15:00:00Z",
-  "originalName": "39640.jpg",
-  "imageDataUrl": "data:image/jpeg;base64,...",
-  "source": "ai",
-  "detections": [
-    {
-      "cloudTypeId": "stratocumulus",
-      "confidence": 0.91,
-      "status": "confirmed",
-      "region": {
-        "type": "rect",
-        "x": 0.03,
-        "y": 0.02,
-        "width": 0.72,
-        "height": 0.50
-      }
-    }
-  ]
-}
+```js
+await window.cloudCatcher.importCloudPhotos({
+  session: {name: 'San Sebastián sky', location: 'San Sebastián'},
+  defaults: {location: 'San Sebastián', source: 'ai'},
+  catches: [{
+    file: imageFile,
+    originalName: imageFile.name,
+    detections: [{
+      cloudTypeId: 'cumulus',
+      confidence: 0.95,
+      status: 'confirmed',
+      region: {type: 'rect', x: 0.1, y: 0.1, width: 0.6, height: 0.4}
+    }]
+  }]
+});
 ```
 
-The response contains the created `photo` and all created `detections`. Each detection includes `snippetRef`, which points to a JPEG crop generated from its region.
+Each catch may supply `file`, `imageDataUrl`, or `imageRef`. The operation creates the optional session, photos, detections and local JPEG snippets, persists the library, and returns `{session, results, summary}`.
 
-## Import a whole cloud session in one request
+## Library ownership
 
-`POST /api/catches/batch`
-
-Use `multipart/form-data`. The request contains:
-
-- one text field named `metadata` containing JSON;
-- one file field per photo (`photo0`, `photo1`, ... by default).
-
-Example metadata:
-
-```json
-{
-  "session": {
-    "name": "San Sebastián sky — 27 Aug 2026",
-    "location": "San Sebastián",
-    "observedAt": "2026-08-27T15:00:00Z",
-    "source": "ai"
-  },
-  "defaults": {
-    "location": "San Sebastián",
-    "source": "ai"
-  },
-  "catches": [
-    {
-      "fileField": "photo0",
-      "originalName": "39640.jpg",
-      "detections": [
-        {
-          "cloudTypeId": "stratocumulus",
-          "confidence": 0.91,
-          "status": "confirmed",
-          "region": {"type":"rect","x":0.03,"y":0.02,"width":0.72,"height":0.50}
-        }
-      ]
-    },
-    {
-      "fileField": "photo1",
-      "originalName": "39367.jpg",
-      "detections": [
-        {
-          "cloudTypeId": "altostratus",
-          "confidence": 0.82,
-          "status": "confirmed",
-          "region": {"type":"rect","x":0,"y":0,"width":1,"height":0.72}
-        }
-      ]
-    }
-  ]
-}
-```
-
-Conceptually the multipart request is:
-
-```text
-metadata = <JSON above>
-photo0   = 39640.jpg
-photo1   = 39367.jpg
-...
-photo8   = ninth-photo.jpg
-```
-
-If `fileField` is omitted, Cloud Catcher expects `photo0`, `photo1`, and so on according to catch order.
-
-The endpoint stores each original image once, creates the optional session, creates every detection, and returns the session, all photo/detection results, snippet references, and batch totals. This is the preferred interface for an AI ingesting a set such as nine photos from one outing.
-
-For compatibility with simple clients, `/api/catches/batch` also accepts the older JSON form using `imageDataUrl`, but multipart upload is preferred for real image files.
-
-## Sessions
-
-A session groups photos that belong to the same outing, weather episode, or imported batch. A session stores `name`, `location`, `observedAt`, `notes`, `source`, and `photoIds`. Photos also store their `sessionId`.
-
-A session is optional: individual catches can exist without one.
-
-## Detection regions
-
-A detection belongs to one photo. Regions use normalized `0..1` coordinates, independent of image resolution.
-
-Rectangle:
-
-```json
-{"type":"rect","x":0.05,"y":0.10,"width":0.50,"height":0.35}
-```
-
-Polygon:
-
-```json
-{
-  "type": "polygon",
-  "points": [[0.05,0.08],[0.61,0.06],[0.70,0.37],[0.18,0.48]]
-}
-```
-
-Detection status may be `proposed`, `confirmed`, or `rejected`. Only confirmed detections count toward Cloud Atlas and location progress.
-
-`GET /api/snippets/:detectionId` returns a cropped JPEG generated from the original photo and the detection region.
-
-## Lower-level photo and detection operations
-
-`POST /api/photos` stores a photo alone. It accepts `imageRef` or base64 `imageDataUrl`.
-
-`POST /api/detections` adds a detection to an existing photo. `PATCH /api/detections/:id` can correct the type, confidence, region, status, or notes.
-
-These endpoints are useful for editing, but AI clients should normally use `/api/catches` or `/api/catches/batch` for ingestion.
-
-## Persistence
-
-The hosted API uses the global Netlify Blob store named `cloud-catcher`, so catches ingested through a Deploy Preview remain available after later preview builds and after the branch is merged.
-
-## Browser API
-
-The web application exposes `window.cloudCatcher` for local automations running in the page:
-
-- `getLibrary()`
-- `getCloudTypes()`
-- `getProgress(location?)`
-- `addPhoto(data)`
-- `addDetection(data)`
-- `updateDetection(id, patch)`
-
-## Library schema
-
-The MVP uses one current schema:
-
-```json
-{
-  "format": "cloud-catcher",
-  "sessions": [],
-  "photos": [],
-  "detections": [],
-  "albums": []
-}
-```
-
-There is no migration/version layer yet; compatibility machinery can be introduced later when there is real persisted user data worth preserving.
-
-## Browser UI/API boundary
-
-The human-facing browser app and the hosted REST API share domain concepts but are not a bidirectional synchronization system in the MVP.
-
-- **Learn** and **Quiz** are read-only practice surfaces. Answering either quiz does not create a photo/detection and does not advance progress.
-- **Catch** writes a confirmed detection into the browser library unless an external client uses the hosted API directly.
-- On load, the browser may read hosted sessions/photos/detections/albums and merge them into the current in-memory view for browsing. This does not turn local browser persistence and Netlify Blob persistence into one canonical synchronized store.
-- `window.cloudCatcher` is the supported page-level automation surface for local browser actions; `/api/*`, `/ai-tools/*`, and `/mcp` are the hosted interfaces.
-
-The deterministic browser contract for these boundaries is covered by the Playwright smoke suite documented in [`TESTING.md`](TESTING.md).
+The portable library contains `format: "cloud-catcher"`, sessions, photos, detections and albums. The Data view exports/imports it as JSON. Images and snippets are local data URLs, so backups are self-contained. This browser library is the only live atlas; there is no Netlify Blob library to merge.

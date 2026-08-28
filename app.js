@@ -1,5 +1,5 @@
 import {LEVEL_ONE,getCloudType} from './src/taxonomy.js';
-import {addDetection,addPhoto,levelProgress,locationCollections,makeDetection,makePhoto,updateDetection} from './src/domain.js';
+import {addDetection,addPhoto,addSession,levelProgress,locationCollections,makeDetection,makePhoto,makeSession,updateDetection} from './src/domain.js';
 import {BrowserStorageProvider,downloadBlob} from './src/storage.js';
 
 const storage=new BrowserStorageProvider();
@@ -191,16 +191,6 @@ function renderQuiz(){renderImageQuiz();renderDefinitionQuiz()}
 renderLearn();
 renderQuiz();
 
-async function mergeHostedLibrary(local){
-  try{
-    const responses=await Promise.all(['sessions','photos','detections','albums'].map(resource=>fetch(`/api/${resource}`)));
-    if(responses.some(r=>!r.ok))return local;
-    const [sessions,photos,detections,albums]=await Promise.all(responses.map(r=>r.json()));
-    const merge=(a,b)=>[...new Map([...a,...b].map(item=>[item.id,item])).values()];
-    return{...local,sessions:merge(local.sessions,sessions),photos:merge(local.photos,photos),detections:merge(local.detections,detections.map(d=>({...d,snippetRef:d.snippetRef||`/api/snippets/${d.id}`}))),albums:merge(local.albums,albums),updatedAt:new Date().toISOString()};
-  }catch{return local}
-}
-
 library=await storage.loadLibrary();
 
 function showView(name){
@@ -226,7 +216,7 @@ function renderCatch(){
 }
 function detectionForm(){return`<label>Location<br><input id="photo-location" value="San Sebastián"></label><label>Cloud type<br><select id="det-type">${LEVEL_ONE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></label><label>Confidence (0–100%)<br><input id="det-confidence" type="number" min="0" max="100" value="90"></label><fieldset><legend>Crop region (% of photo)</legend><div class="region-grid"><label>Left<input id="det-x" type="number" min="0" max="100" value="0"></label><label>Top<input id="det-y" type="number" min="0" max="100" value="0"></label><label>Width<input id="det-w" type="number" min="0" max="100" value="0"></label><label>Height<input id="det-h" type="number" min="0" max="100" value="0"></label></div></fieldset><div class="toolbar"><button id="save-detection" class="primary">Select a cloud region first</button></div><p class="muted">After saving, drag another region on this same image to add another cloud.</p>`}
 async function loadPhoto(e){const file=e.target.files?.[0];if(!file)return;const dataUrl=await fileDataUrl(file);const size=await imageSize(dataUrl);pendingImage={file,dataUrl,...size,photoId:null};renderCatch()}
-async function cropDataUrl(src,region){const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=src});const sx=Math.floor(region.x*img.naturalWidth),sy=Math.floor(region.y*img.naturalHeight),sw=Math.max(1,Math.ceil(region.width*img.naturalWidth)),sh=Math.max(1,Math.ceil(region.height*img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=sw;canvas.height=sh;canvas.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);return canvas.toDataURL('image/jpeg',.84)}
+async function cropDataUrl(src,region){const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=src});const bounds=region.type==='polygon'?{x:Math.min(...region.points.map(p=>p[0])),y:Math.min(...region.points.map(p=>p[1])),width:Math.max(...region.points.map(p=>p[0]))-Math.min(...region.points.map(p=>p[0])),height:Math.max(...region.points.map(p=>p[1]))-Math.min(...region.points.map(p=>p[1]))}:region;const sx=Math.floor(bounds.x*img.naturalWidth),sy=Math.floor(bounds.y*img.naturalHeight),sw=Math.max(1,Math.ceil(bounds.width*img.naturalWidth)),sh=Math.max(1,Math.ceil(bounds.height*img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=sw;canvas.height=sh;canvas.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);return canvas.toDataURL('image/jpeg',.84)}
 async function saveRealDetection(){
   const location=views.catch.querySelector('#photo-location')?.value||'Unknown';
   if(!pendingImage?.photoId){const photo=makePhoto({location,imageRef:pendingImage.dataUrl,originalName:pendingImage.file.name,width:pendingImage.width,height:pendingImage.height,source:'upload'});library=addPhoto(library,photo);pendingImage.photoId=photo.id}
@@ -239,16 +229,37 @@ async function saveRealDetection(){
   views.catch.querySelector('#upload-feedback').innerHTML=`<div class="feedback"><strong>Caught!</strong> ${getCloudType(detection.cloudTypeId).name} added. Drag another region on this photo to add another cloud.</div>`;
 }
 
-function renderDetectionThumb(d){const type=getCloudType(d.cloudTypeId);const snippet=d.snippetRef||`/api/snippets/${d.id}`;return`<figure class="detection-thumb ${d.status==='proposed'?'proposed':''}"><img src="${snippet}" alt="${escapeHtml(type?.name||d.cloudTypeId)} crop" loading="lazy" decoding="async"><figcaption><strong>${escapeHtml(type?.name||d.cloudTypeId)}</strong>${d.confidence==null?'':` · ${Math.round(d.confidence*100)}%`}${d.status==='proposed'?' · proposed':''}</figcaption></figure>`}
+function renderDetectionThumb(d){const type=getCloudType(d.cloudTypeId);return`<figure class="detection-thumb ${d.status==='proposed'?'proposed':''}">${d.snippetRef?`<img src="${d.snippetRef}" alt="${escapeHtml(type?.name||d.cloudTypeId)} crop" loading="lazy" decoding="async">`:''}<figcaption><strong>${escapeHtml(type?.name||d.cloudTypeId)}</strong>${d.confidence==null?'':` · ${Math.round(d.confidence*100)}%`}${d.status==='proposed'?' · proposed':''}</figcaption></figure>`}
 function renderPhotoJournal(){if(!library.photos.length)return'<p>No photos stored yet.</p>';return`<div class="photo-grid">${library.photos.map(photo=>{const detections=library.detections.filter(d=>d.photoId===photo.id&&d.status!=='rejected');const name=photo.originalName||`Photo ${photo.id.slice(0,8)}`;return`<article class="photo-tile">${photo.imageRef?`<img class="photo-thumb" src="${photo.imageRef}" alt="${escapeHtml(name)}" loading="lazy" decoding="async">`:'<div class="photo-thumb photo-placeholder">☁</div>'}<div class="photo-meta"><strong class="photo-filename">${escapeHtml(name)}</strong><span>${escapeHtml(photo.location||'Unknown')}</span>${detections.length?`<div class="detection-thumbs">${detections.map(renderDetectionThumb).join('')}</div>`:'<p class="unclassified-note">No cloud regions identified yet.</p>'}</div></article>`}).join('')}</div>`}
 function referenceArt(c){return`<div class="reference-photo-wrap"><img class="card-photo reference-photo" src="${c.referenceImage}" alt="Reference example of ${escapeHtml(c.name)}" loading="lazy" decoding="async"><span class="reference-badge">Example</span></div>`}
 function renderAtlas(){
   const progress=levelProgress(library),locations=locationCollections(library),confirmed=library.detections.filter(d=>d.status==='confirmed'),visible=library.detections.filter(d=>d.status!=='rejected');
-  views.atlas.innerHTML=`<div class="panel"><p class="eyebrow">Cloud Atlas</p><h2>Level 1 collection</h2><div class="stats"><div class="stat"><strong>${progress.caught}/${progress.required}</strong>types caught</div><div class="stat"><strong>${progress.complete?'Complete':'In progress'}</strong>level status</div><div class="stat"><strong>${library.photos.length}</strong>photos</div><div class="stat"><strong>${confirmed.length}</strong>confirmed clouds</div></div><div class="grid">${LEVEL_ONE.map(c=>{const d=confirmed.find(x=>x.cloudTypeId===c.id)||visible.find(x=>x.cloudTypeId===c.id);const snippet=d?.snippetRef||(d?`/api/snippets/${d.id}`:null);return`<article class="cloud-card ${d?'':'reference-card'} ${d&&d.status!=='confirmed'?'proposed-card':''}">${snippet?`<img class="card-photo" src="${snippet}" alt="${c.name} crop" loading="lazy" decoding="async">`:referenceArt(c)}<div class="cloud-copy"><p class="cloud-code">${c.code} · ${c.family}</p><h3>${c.name}</h3><p class="cloud-summary">${d?c.summary:c.clue}</p>${!d?'<p class="not-caught">Reference example — not your catch</p>':''}</div></article>`}).join('')}</div><h2>Photo journal</h2>${renderPhotoJournal()}<h2>Location cards</h2><div class="grid">${locations.map(p=>`<article class="cloud-card ${p.complete?'':'locked'}"><div class="cloud-copy"><p class="cloud-code">Level ${p.level}</p><h3>${escapeHtml(p.location)}</h3><p>${p.caught}/${p.required} cloud genera caught here</p></div></article>`).join('')}</div></div>`;
+  views.atlas.innerHTML=`<div class="panel"><p class="eyebrow">Cloud Atlas</p><h2>Level 1 collection</h2><div class="stats"><div class="stat"><strong>${progress.caught}/${progress.required}</strong>types caught</div><div class="stat"><strong>${progress.complete?'Complete':'In progress'}</strong>level status</div><div class="stat"><strong>${library.photos.length}</strong>photos</div><div class="stat"><strong>${confirmed.length}</strong>confirmed clouds</div></div><div class="grid">${LEVEL_ONE.map(c=>{const d=confirmed.find(x=>x.cloudTypeId===c.id)||visible.find(x=>x.cloudTypeId===c.id);return`<article class="cloud-card ${d?'':'reference-card'} ${d&&d.status!=='confirmed'?'proposed-card':''}">${d?.snippetRef?`<img class="card-photo" src="${d.snippetRef}" alt="${c.name} crop" loading="lazy" decoding="async">`:referenceArt(c)}<div class="cloud-copy"><p class="cloud-code">${c.code} · ${c.family}</p><h3>${c.name}</h3><p class="cloud-summary">${d?c.summary:c.clue}</p>${!d?'<p class="not-caught">Reference example — not your catch</p>':''}</div></article>`}).join('')}</div><h2>Photo journal</h2>${renderPhotoJournal()}<h2>Location cards</h2><div class="grid">${locations.map(p=>`<article class="cloud-card ${p.complete?'':'locked'}"><div class="cloud-copy"><p class="cloud-code">Level ${p.level}</p><h3>${escapeHtml(p.location)}</h3><p>${p.caught}/${p.required} cloud genera caught here</p></div></article>`).join('')}</div></div>`;
 }
-function renderData(){const proposed=library.detections.filter(d=>d.status==='proposed').length;views.data.innerHTML=`<div class="panel"><p class="eyebrow">Your data</p><h2>Portable by design</h2><div class="toolbar"><button id="export" class="primary">Export library</button><label class="button file-label">Import library<input id="import" type="file" accept="application/json,.json"></label></div><p><b>${library.photos.length}</b> photos · <b>${library.detections.length}</b> detections · <b>${proposed}</b> awaiting confirmation</p></div>`;views.data.querySelector('#export').addEventListener('click',async()=>downloadBlob(await storage.exportArchive(library),`cloud-catcher-${new Date().toISOString().slice(0,10)}.json`));views.data.querySelector('#import').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;library=await storage.importArchive(file);await storage.saveLibrary(library);renderData()})}
+function renderData(){const proposed=library.detections.filter(d=>d.status==='proposed').length;views.data.innerHTML=`<div class="panel"><p class="eyebrow">Your data</p><h2>Stored privately in this browser</h2><p>Your atlas and photos stay on this device. Export a backup before clearing browser data or changing devices.</p><div class="toolbar"><button id="export" class="primary">Export library</button><label class="button file-label">Import library<input id="import" type="file" accept="application/json,.json"></label></div><p><b>${library.photos.length}</b> photos · <b>${library.detections.length}</b> detections · <b>${proposed}</b> awaiting confirmation</p></div>`;views.data.querySelector('#export').addEventListener('click',async()=>downloadBlob(await storage.exportArchive(library),`cloud-catcher-${new Date().toISOString().slice(0,10)}.json`));views.data.querySelector('#import').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;library=await storage.importArchive(file);await storage.saveLibrary(library);renderData()})}
 
-window.cloudCatcher={getLibrary:()=>structuredClone(library),getCloudTypes:()=>structuredClone(LEVEL_ONE),getProgress:(location=null)=>levelProgress(library,1,location),addPhoto:async data=>{const p=makePhoto(data);library=addPhoto(library,p);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(p)},addDetection:async data=>{const d=makeDetection(data);library=addDetection(library,d);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(d)},updateDetection:async(id,patch)=>{library=updateDetection(library,id,patch);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(library.detections.find(d=>d.id===id))}};
+async function importCloudPhotos({session=null,defaults={},catches=[]}){
+  let sessionRecord=null;
+  if(session){sessionRecord=makeSession({...defaults,...session,source:session.source||defaults.source||'ai'});library=addSession(library,sessionRecord)}
+  const results=[];
+  for(const item of catches){
+    const imageRef=item.imageDataUrl||(item.file?await fileDataUrl(item.file):item.imageRef||null);
+    const size=imageRef?await imageSize(imageRef):{width:item.width??null,height:item.height??null};
+    const photo=makePhoto({...defaults,...item,sessionId:sessionRecord?.id||item.sessionId||null,imageRef,originalName:item.originalName||item.file?.name||null,width:size.width,height:size.height,source:item.source||defaults.source||'ai'});
+    library=addPhoto(library,photo);
+    const detections=[];
+    for(const value of item.detections||[]){
+      const detection=makeDetection({...value,photoId:photo.id,source:value.source||item.source||defaults.source||'ai'});
+      if(imageRef)detection.snippetRef=await cropDataUrl(imageRef,detection.region);
+      library=addDetection(library,detection);
+      detections.push(detection);
+    }
+    results.push({photo,detections});
+  }
+  await storage.saveLibrary(library);
+  if(activeView==='atlas')renderAtlas();
+  if(activeView==='data')renderData();
+  return structuredClone({session:sessionRecord,results,summary:{photos:results.length,detections:results.reduce((sum,result)=>sum+result.detections.length,0)}});
+}
 
-const syncHosted=async()=>{const merged=await mergeHostedLibrary(library);library=merged;if(activeView==='atlas')renderAtlas();if(activeView==='data')renderData()};
-if('requestIdleCallback'in window)requestIdleCallback(()=>syncHosted(),{timeout:2500});else setTimeout(syncHosted,300);
+window.cloudCatcher={getLibrary:()=>structuredClone(library),getCloudTypes:()=>structuredClone(LEVEL_ONE),getProgress:(location=null)=>levelProgress(library,1,location),importCloudPhotos,addPhoto:async data=>{const p=makePhoto(data);library=addPhoto(library,p);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(p)},addDetection:async data=>{const d=makeDetection(data);library=addDetection(library,d);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(d)},updateDetection:async(id,patch)=>{library=updateDetection(library,id,patch);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(library.detections.find(d=>d.id===id))}};

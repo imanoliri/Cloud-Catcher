@@ -4,12 +4,10 @@ const tinySvg='<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"><
 
 test.beforeEach(async({page})=>{
   await page.addInitScript(()=>{
-    localStorage.clear();
     const values=[0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95];
     let index=0;
     Math.random=()=>values[index++%values.length];
   });
-  await page.route('**/api/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
   await page.route('https://**/*',route=>{
     if(route.request().resourceType()==='image'){
       return route.fulfill({status:200,contentType:'image/svg+xml',body:tinySvg});
@@ -114,7 +112,44 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await expect(page.getByRole('heading',{name:'Photo journal'})).toBeVisible();
 
   await page.getByRole('button',{name:'Data'}).click();
-  await expect(page.getByRole('heading',{name:'Portable by design'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Stored privately in this browser'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Export library'})).toBeVisible();
   await expect(page.getByText(/1 photos · 1 detections/)).toBeVisible();
+
+  await page.reload();
+  await page.getByRole('button',{name:'Atlas'}).click();
+  await expect(page.locator('.stats .stat strong').first()).toHaveText('1/10');
+  await expect(page.getByText('cloud.svg',{exact:true})).toBeVisible();
+});
+
+test('local batch ingestion uses the same persistent atlas',async({page})=>{
+  const summary=await page.evaluate(async imageDataUrl=>{
+    const result=await window.cloudCatcher.importCloudPhotos({
+      session:{name:'Test outing',location:'San Sebastián'},
+      defaults:{location:'San Sebastián',source:'playwright'},
+      catches:[{originalName:'batch-cloud.svg',imageDataUrl,detections:[{cloudTypeId:'altocumulus',confidence:.88,status:'confirmed',region:{type:'rect',x:.1,y:.1,width:.7,height:.5}}]}]
+    });
+    return result.summary;
+  },`data:image/svg+xml,${encodeURIComponent(tinySvg)}`);
+  expect(summary).toEqual({photos:1,detections:1});
+
+  await page.getByRole('button',{name:'Atlas'}).click();
+  await expect(page.locator('.stats .stat strong').first()).toHaveText('1/10');
+  await expect(page.getByText('batch-cloud.svg',{exact:true})).toBeVisible();
+  await page.reload();
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().sessions.length)).toBe(1);
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos.length)).toBe(1);
+});
+
+test('legacy localStorage atlas migrates to IndexedDB',async({page})=>{
+  await page.evaluate(()=>{
+    localStorage.setItem('cloud-catcher-library',JSON.stringify({
+      format:'cloud-catcher',sessions:[],photos:[{id:'legacy-photo',sessionId:null,location:'Legacy',observedAt:'2026-08-01T00:00:00.000Z',imageRef:null,originalName:'legacy.jpg',notes:'',source:'legacy',width:null,height:null,createdAt:'2026-08-01T00:00:00.000Z'}],detections:[],albums:[],createdAt:'2026-08-01T00:00:00.000Z',updatedAt:'2026-08-01T00:00:00.000Z'
+    }));
+  });
+  await page.reload();
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos[0].originalName)).toBe('legacy.jpg');
+  expect(await page.evaluate(()=>localStorage.getItem('cloud-catcher-library'))).toBeNull();
+  await page.reload();
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos[0].originalName)).toBe('legacy.jpg');
 });

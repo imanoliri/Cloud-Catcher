@@ -47,14 +47,15 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - Shows other detections from the same photo.
 - Offers edit/review actions where appropriate.
 
-### F5 — Durable browser image storage
+### F5 — Storage visibility and quota management
 
-**Goal:** Keep a useful personal collection without running into `localStorage` limits.
+**Goal:** Help users understand and manage a growing IndexedDB photo atlas.
 
 **Acceptance criteria:**
-- Store browser images in IndexedDB or another binary-capable local store.
-- Keep library metadata portable.
-- Existing browser collections can be moved into the new storage approach without data loss.
+- Show approximate local storage use and available quota when the browser exposes it.
+- Warn before storage pressure can make new catches fail.
+- Offer safe image downsampling and cleanup without breaking detections.
+- Keep export/import self-contained and preserve the automatic localStorage migration.
 
 ## Priority 2 — Make AI assistance a first-class product flow
 
@@ -120,15 +121,16 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - Sort newest/oldest and optionally by confidence.
 - Unclassified photos remain discoverable.
 
-### F12 — Self-contained backup/export
+### F12 — Optional Google Drive backup and synchronization
 
-**Goal:** Export the collection so it can be restored independently of the currently hosted Netlify image URLs.
+**Goal:** Carry the same user-owned atlas across devices without creating a second collection.
 
 **Acceptance criteria:**
-- Export metadata plus original images, or a documented archive format containing both.
-- Import restores photos, detections, sessions and albums.
-- Hosted and browser collections can be backed up using the same conceptual format.
-- Export remains user-owned and provider-independent.
+- Connection and every initial upload are explicitly authorized by the user.
+- Browser and Drive represent one logical library with documented conflict handling.
+- The browser remains an offline-capable cache.
+- Export/import remains a provider-independent recovery path.
+- Disconnecting Drive does not delete the local atlas.
 
 ## Priority 4 — Complete the game/learning progression
 
@@ -244,12 +246,13 @@ Future features should preserve these existing decisions:
 
 1. **One original photo, many detections.** Do not duplicate images per cloud type.
 2. **Reference / proposed / confirmed remain distinct.** Only confirmed real observations advance progress.
-3. **Simulation/domain state stays separate from presentation.** UI features should use domain/API operations rather than encode separate progress rules.
-4. **Portable data remains canonical.** Netlify, browser storage, Google Drive and future providers are adapters.
+3. **Domain state stays separate from presentation.** UI features should use domain/browser-API operations rather than encode separate progress rules.
+4. **One logical atlas.** IndexedDB is the MVP store; Google Drive and future providers may back up or synchronize that same user-owned library, never create silently merged parallel collections.
 5. **AI is an assistant, not a parallel database.** AI-produced detections use the same normal detection model and review flow.
 6. **Derived analytics stay derived.** Frequencies, seasonal profiles, co-occurrence relationships and similar statistics should normally be recomputed from canonical photos/sessions/detections rather than stored as duplicate truth.
 7. **Personal observations and external climatology stay distinct.** Do not present sampling-biased personal catches as objective local climate data, and do not mix external weather datasets into collection progress.
 8. **Keep the MVP understandable.** Prefer completing the field-observation loop before adding social, competitive or highly elaborate mechanics.
+9. **Static hosting stays data-free.** Do not store personal photos or atlas records in Netlify Blobs or expose unauthenticated remote mutations.
 
 ## Priority 6 — Learning mastery
 

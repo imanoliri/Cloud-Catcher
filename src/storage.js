@@ -1,8 +1,30 @@
 import {emptyLibrary,validateLibrary} from './domain.js';
 const KEY='cloud-catcher-library';
+const DB_NAME='cloud-catcher';
+const STORE_NAME='libraries';
+
+function openDatabase(){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(DB_NAME,1);
+    request.onupgradeneeded=()=>request.result.createObjectStore(STORE_NAME);
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+
+async function databaseOperation(mode,operation){
+  const database=await openDatabase();
+  try{return await new Promise((resolve,reject)=>{
+    const transaction=database.transaction(STORE_NAME,mode);
+    const request=operation(transaction.objectStore(STORE_NAME));
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+    transaction.onerror=()=>reject(transaction.error);
+  })}finally{database.close()}
+}
 export class BrowserStorageProvider{
-  async loadLibrary(){const raw=localStorage.getItem(KEY);return raw?validateLibrary(JSON.parse(raw)):emptyLibrary()}
-  async saveLibrary(library){localStorage.setItem(KEY,JSON.stringify({...library,updatedAt:new Date().toISOString()}))}
+  async loadLibrary(){const stored=await databaseOperation('readonly',store=>store.get(KEY));if(stored)return validateLibrary(stored);const legacy=localStorage.getItem(KEY);if(!legacy)return emptyLibrary();const library=validateLibrary(JSON.parse(legacy));await this.saveLibrary(library);localStorage.removeItem(KEY);return library}
+  async saveLibrary(library){const saved={...validateLibrary(library),updatedAt:new Date().toISOString()};await databaseOperation('readwrite',store=>store.put(saved,KEY));return saved}
   async exportArchive(library){return new Blob([JSON.stringify(library,null,2)],{type:'application/json'})}
   async importArchive(file){return validateLibrary(JSON.parse(await file.text()))}
 }
