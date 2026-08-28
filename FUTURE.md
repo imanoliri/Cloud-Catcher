@@ -168,7 +168,7 @@ This document tracks user journeys Cloud Catcher should support but does **not**
 - The next available taxonomy level or challenge is presented immediately.
 - Progress never depends on reference images or unconfirmed proposals.
 
-## Priority 5 — Personal cloud history
+## Priority 5 — Personal cloud history and local profiles
 
 ### F17 — Timeline and seasonal history
 
@@ -182,6 +182,62 @@ Show useful statistics such as most commonly caught genera, locations with most 
 
 Allow taxonomy or rules to identify unusually interesting observations, while keeping the core learning game understandable for beginners.
 
+### F20 — Data-driven location cloud profiles
+
+**Goal:** Build a profile for a location from the user's own confirmed observations instead of hard-coding which clouds are expected there.
+
+The profile should be derived from existing photo/session metadata and detections. Location and observation time should come from photo metadata where available, and all cloud detections from the same image remain linked so the system can learn which cloud genera appear together.
+
+**Potential derived statistics:**
+- Frequency of each cloud genus at a location.
+- Number of observations and sessions supporting each statistic.
+- Distribution by month, season and optionally time of day.
+- Changes in observed cloud mix through the year.
+- Diversity of cloud genera observed at each location.
+- Confidence/review-aware statistics that primarily use confirmed observations.
+
+**Important interpretation:** this initially represents **“clouds you have observed here”**, not an objective climatological statement about what clouds normally occur at that location. The UI should communicate sample size and avoid presenting sparse personal data as authoritative climate information.
+
+### F21 — Cloud co-occurrence analysis
+
+**Goal:** Learn which cloud genera tend to occur together in one sky or weather episode.
+
+**Derivation:**
+- Same-photo co-occurrence: two or more confirmed genera detected in one original image.
+- Same-session co-occurrence: genera observed during the same outing/weather episode even if they occur in different photos.
+- Location-specific co-occurrence: relationships calculated separately for places with sufficient data.
+- Seasonal co-occurrence: optionally compare relationships by month or season when enough observations exist.
+
+**Possible UI:**
+- “Often seen together” on a cloud detail page.
+- A simple pair-frequency table or network/graph.
+- Statements such as “In your San Sebastián observations, Stratocumulus often appears with Altocumulus,” always accompanied by the supporting observation count.
+
+The analysis should be derived rather than persisted as canonical state so corrections to detections automatically update it.
+
+### F22 — Personal observations vs regional climate profile
+
+**Goal:** Eventually distinguish the user's empirical collection from a broader external picture of typical clouds for the area.
+
+A future location page could show two clearly separate layers:
+- **Your observations:** derived only from the user's photos, timestamps, sessions and confirmed detections.
+- **Typical for this location:** optional external meteorological/climatological information from a trustworthy source.
+
+The application should never silently blend these datasets. External climate information should remain attributable to its source and should not alter collection progress.
+
+### F23 — Metadata-assisted observation context
+
+**Goal:** Reduce manual entry and improve the quality of location/time analytics.
+
+**Potential behavior:**
+- Read photo capture time from EXIF metadata when available.
+- Read GPS coordinates from EXIF when available and let the user confirm or correct the interpreted location.
+- Group photos captured close together in time/place into a suggested session or weather episode.
+- Preserve explicitly entered user metadata over inferred metadata when they conflict.
+- Keep working when metadata is absent or has been stripped by messaging/social applications.
+
+This feature would improve seasonal, location and co-occurrence analytics without requiring extra work for every uploaded photo.
+
 ## Architecture constraints for future work
 
 Future features should preserve these existing decisions:
@@ -191,4 +247,6 @@ Future features should preserve these existing decisions:
 3. **Simulation/domain state stays separate from presentation.** UI features should use domain/API operations rather than encode separate progress rules.
 4. **Portable data remains canonical.** Netlify, browser storage, Google Drive and future providers are adapters.
 5. **AI is an assistant, not a parallel database.** AI-produced detections use the same normal detection model and review flow.
-6. **Keep the MVP understandable.** Prefer completing the field-observation loop before adding social, competitive or highly elaborate mechanics.
+6. **Derived analytics stay derived.** Frequencies, seasonal profiles, co-occurrence relationships and similar statistics should normally be recomputed from canonical photos/sessions/detections rather than stored as duplicate truth.
+7. **Personal observations and external climatology stay distinct.** Do not present sampling-biased personal catches as objective local climate data, and do not mix external weather datasets into collection progress.
+8. **Keep the MVP understandable.** Prefer completing the field-observation loop before adding social, competitive or highly elaborate mechanics.
