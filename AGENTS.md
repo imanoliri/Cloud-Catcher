@@ -14,7 +14,10 @@ Cloud Catcher is a cloud-identification and collection game built around fractal
 - Location completion is derived from confirmed detections; do not duplicate progress state without a compelling reason.
 - Preserve offline usability of the human-facing app.
 - Prefer small static-first dependencies and Netlify-compatible deployment.
-- Add tests when changing taxonomy traversal, detection/progress calculation, storage behavior, or API ingestion.
+- Add tests when changing taxonomy traversal, detection/progress calculation, storage behavior, API ingestion, or user-visible navigation/quiz behavior.
+- `app.js` is the single owner of Learn and Quiz rendering. Do not reintroduce separate quiz/learn renderer scripts that compete for the same views.
+- Every browser asset referenced by `index.html` must be copied into `dist` by the static `npm run build` command.
+- Before merging a feature branch, run the deterministic unit + Playwright suite (`npm run test:all`) and verify the Netlify Deploy Preview for the exact PR head.
 
 ## Rules for AI clients
 
@@ -45,6 +48,9 @@ Machine-readable tool discovery is available at `/ai-tools` and `/openapi.json`.
 - `openapi.json`: machine-readable AI/API contract
 - `docs/AI_TOOLS.md`: AI-agent integration guide
 - `docs/API.md`: underlying REST API contract
+- `docs/TESTING.md`: deterministic unit, build, and Playwright smoke-test contract
+- `playwright.config.js`: mobile Chromium end-to-end configuration
+- `tests/e2e/smoke.spec.js`: deterministic MVP browser smoke tests
 - `ARCHITECTURE.md`: system design and invariants
 
 ## MVP boundary
