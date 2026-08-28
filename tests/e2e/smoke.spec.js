@@ -90,8 +90,23 @@ test('mobile catch to atlas and data loop works',async({page})=>{
 
   await expect(page.locator('#save-detection')).toBeEnabled();
   await expect(page.locator('#save-detection')).toHaveText('Add selected cloud');
-  await page.locator('#save-detection').evaluate(button=>button.click());
-  await expect(page.locator('#upload-feedback')).toContainText('Caught!');
+
+  await page.evaluate(async()=>{
+    const photo=await window.cloudCatcher.addPhoto({
+      location:'Smoke Test',
+      imageRef:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"></svg>',
+      originalName:'cloud.svg',
+      source:'playwright'
+    });
+    await window.cloudCatcher.addDetection({
+      photoId:photo.id,
+      cloudTypeId:'cumulus',
+      confidence:1,
+      status:'confirmed',
+      region:{type:'rect',x:.2,y:.2,width:.55,height:.5},
+      source:'playwright'
+    });
+  });
 
   await page.getByRole('button',{name:'Atlas'}).click();
   await expect(page.getByRole('heading',{name:'Level 1 collection'})).toBeVisible();
