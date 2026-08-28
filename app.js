@@ -3,22 +3,16 @@ import {addDetection,addPhoto,levelProgress,locationCollections,makeDetection,ma
 import {BrowserStorageProvider,downloadBlob} from './src/storage.js';
 
 const storage=new BrowserStorageProvider();
-const views={learn:document.querySelector('#learn-view'),catch:document.querySelector('#catch-view'),atlas:document.querySelector('#atlas-view'),data:document.querySelector('#data-view')};
+const views={learn:document.querySelector('#learn-view'),quiz:document.querySelector('#quiz-view'),catch:document.querySelector('#catch-view'),atlas:document.querySelector('#atlas-view'),data:document.querySelector('#data-view')};
 let activeView='learn';
 let library=null;
 let pendingImage=null;
-let learnCurrent=null;
-let learnExampleIndex=0;
-let learnAnswered=false;
 
 const escapeHtml=(v='')=>String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
-const shuffle=a=>[...a].sort(()=>Math.random()-.5);
 const fileDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)});
 const imageSize=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});img.onerror=reject;img.src=src});
 const thumbnailUrl=(src,width=220)=>src.replace(/([?&])width=\d+/i,`$1width=${width}`);
 
-const learnExamples=type=>type.referenceImages?.length?type.referenceImages:[{image:type.referenceImage,page:type.referencePage}];
-function chooseLearnQuestion(){learnCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];learnExampleIndex=Math.floor(Math.random()*learnExamples(learnCurrent).length);learnAnswered=false}
 function cloudGuide(){
   const meanings=[
     ['cirro-','High','High, thin clouds, usually made mostly of ice crystals.'],
@@ -35,7 +29,7 @@ function cloudGuide(){
   ];
   return `<section class="cloud-guide" aria-labelledby="cloud-guide-title">
     <div class="guide-intro">
-      <p class="eyebrow">Field guide</p>
+      <p class="eyebrow">Learn · Level 1</p>
       <h2 id="cloud-guide-title">How clouds form & how their names work</h2>
       <p>Clouds form when moist air rises and cools to its dew point. Water vapour then condenses onto tiny particles such as dust or sea salt, making droplets or ice crystals visible as a cloud.</p>
     </div>
@@ -54,23 +48,7 @@ function cloudGuide(){
     </div>
   </section>`;
 }
-function renderLearn(){
-  if(!learnCurrent)chooseLearnQuestion();
-  const choices=shuffle([learnCurrent,...shuffle(LEVEL_ONE.filter(c=>c.id!==learnCurrent.id)).slice(0,3)]);
-  const examples=learnExamples(learnCurrent);
-  const learnExample=examples[learnExampleIndex];
-  const learnImage=thumbnailUrl(learnExample.image,220);
-  views.learn.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>Practice identifying the ten principal cloud genera. Quiz answers never create catches or change Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${learnImage}" alt="Cloud identification practice example ${learnExampleIndex+1} of ${examples.length}" decoding="async" fetchpriority="high"><span class="reference-badge">Example ${learnExampleIndex+1} of ${examples.length}</span></div></div>${cloudGuide()}`;
-  views.learn.querySelectorAll('[data-learn-choice]').forEach(b=>b.addEventListener('click',()=>answerLearn(b.dataset.learnChoice)));
-}
-function answerLearn(id){
-  if(learnAnswered)return;learnAnswered=true;
-  const correct=id===learnCurrent.id;
-  const feedback=views.learn.querySelector('#learn-feedback');
-  feedback.innerHTML=`<div class="feedback"><strong>${correct?'Correct!':'Not quite.'}</strong> This is <b>${learnCurrent.name}</b>. ${learnCurrent.clue}<div class="toolbar"><button id="learn-next" class="primary">Next cloud</button></div></div>`;
-  views.learn.querySelector('#learn-next').addEventListener('click',()=>{chooseLearnQuestion();renderLearn()});
-}
-
+function renderLearn(){views.learn.innerHTML=cloudGuide()}
 renderLearn();
 
 async function mergeHostedLibrary(local){
@@ -94,7 +72,8 @@ function showView(name){
 document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
 
 function renderActive(){
-  if(activeView==='learn')return;
+  if(activeView==='learn')renderLearn();
+  if(activeView==='quiz')window.dispatchEvent(new CustomEvent('cloud-catcher:quiz-active'));
   if(activeView==='catch')renderCatch();
   if(activeView==='atlas')renderAtlas();
   if(activeView==='data')renderData();
