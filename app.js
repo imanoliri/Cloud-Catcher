@@ -67,21 +67,78 @@ function chooseDefinitionQuizQuestion(){
   definitionQuizCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];
   definitionQuizAnswered=false;
 }
+let quizTooltipEl=null;
+let pinnedQuizHelp=null;
+
+function getQuizTooltip(){
+  if(quizTooltipEl)return quizTooltipEl;
+  quizTooltipEl=document.createElement('div');
+  quizTooltipEl.className='quiz-tooltip-floating';
+  quizTooltipEl.setAttribute('role','tooltip');
+  quizTooltipEl.hidden=true;
+  Object.assign(quizTooltipEl.style,{
+    position:'fixed',zIndex:'1000',maxWidth:'calc(100vw - 24px)',width:'270px',
+    padding:'.7rem .8rem',border:'1px solid #cfe4f4',borderRadius:'12px',
+    background:'#fff',boxShadow:'0 10px 30px rgba(40,90,120,.16)',
+    fontSize:'.84rem',lineHeight:'1.4',fontWeight:'500',color:'#48677e',
+    textAlign:'left',whiteSpace:'normal'
+  });
+  document.body.append(quizTooltipEl);
+  return quizTooltipEl;
+}
+
+function positionQuizTooltip(help){
+  const tip=getQuizTooltip();
+  const rect=help.getBoundingClientRect();
+  const width=tip.offsetWidth;
+  const height=tip.offsetHeight;
+  let left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
+  let top=rect.bottom+8;
+  if(top+height>window.innerHeight-12&&rect.top-height-8>=12)top=rect.top-height-8;
+  tip.style.left=`${left}px`;
+  tip.style.top=`${Math.max(12,top)}px`;
+}
+
+function showQuizTooltip(help){
+  const tip=getQuizTooltip();
+  tip.textContent=help.dataset.tooltip||'';
+  tip.hidden=false;
+  help.setAttribute('aria-expanded','true');
+  requestAnimationFrame(()=>positionQuizTooltip(help));
+}
+
+function hideQuizTooltip(){
+  if(quizTooltipEl)quizTooltipEl.hidden=true;
+  views.quiz?.querySelectorAll('.quiz-help[aria-expanded="true"]').forEach(help=>help.setAttribute('aria-expanded','false'));
+}
+
 function wireQuizHelp(section){
   section.querySelectorAll('.quiz-help').forEach(help=>{
+    help.addEventListener('mouseenter',()=>{if(!pinnedQuizHelp)showQuizTooltip(help)});
+    help.addEventListener('mouseleave',()=>{if(!pinnedQuizHelp)hideQuizTooltip()});
+    help.addEventListener('focus',()=>{if(!pinnedQuizHelp)showQuizTooltip(help)});
+    help.addEventListener('blur',()=>{if(!pinnedQuizHelp)hideQuizTooltip()});
     const toggle=event=>{
       event.stopPropagation();
-      const open=help.getAttribute('aria-expanded')==='true';
-      views.quiz.querySelectorAll('.quiz-help[aria-expanded="true"]').forEach(other=>other.setAttribute('aria-expanded','false'));
-      help.setAttribute('aria-expanded',String(!open));
+      if(pinnedQuizHelp===help){
+        pinnedQuizHelp=null;
+        hideQuizTooltip();
+      }else{
+        pinnedQuizHelp=help;
+        hideQuizTooltip();
+        showQuizTooltip(help);
+      }
     };
     help.addEventListener('click',toggle);
     help.addEventListener('keydown',event=>{
       if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle(event)}
+      if(event.key==='Escape'){pinnedQuizHelp=null;hideQuizTooltip()}
     });
   });
 }
-document.addEventListener('click',()=>views.quiz?.querySelectorAll('.quiz-help[aria-expanded="true"]').forEach(help=>help.setAttribute('aria-expanded','false')));
+document.addEventListener('click',()=>{pinnedQuizHelp=null;hideQuizTooltip()});
+window.addEventListener('resize',()=>{if(pinnedQuizHelp)positionQuizTooltip(pinnedQuizHelp);else hideQuizTooltip()});
+window.addEventListener('scroll',()=>{if(pinnedQuizHelp)positionQuizTooltip(pinnedQuizHelp);else hideQuizTooltip()},{passive:true});
 
 function renderImageQuiz(){
   if(!imageQuizCurrent)chooseImageQuizQuestion();
@@ -91,7 +148,7 @@ function renderImageQuiz(){
   const section=document.createElement('section');
   section.id='image-quiz';
   section.className='image-quiz panel';
-  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2 class="quiz-question">Which cloud is this? <span class="quiz-help" role="button" tabindex="0" aria-label="Identification quiz instructions" aria-expanded="false">ℹ️<span class="quiz-tooltip" role="tooltip">Choose the cloud genus that best matches the picture.</span></span></h2><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
+  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2 class="quiz-question">Which cloud is this? <span class="quiz-help" role="button" tabindex="0" aria-label="Identification quiz instructions" aria-expanded="false" data-tooltip="Choose the cloud genus that best matches the picture.">ℹ️</span></h2><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
   const old=views.quiz.querySelector('#image-quiz');
   old?old.replaceWith(section):views.quiz.prepend(section);
   wireQuizHelp(section);
@@ -113,7 +170,7 @@ function renderDefinitionQuiz(){
   const section=document.createElement('section');
   section.id='definition-quiz';
   section.className='definition-quiz panel';
-  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does ${definitionQuizCurrent.name} mean? <span class="quiz-help" role="button" tabindex="0" aria-label="Definition quiz instructions" aria-expanded="false">ℹ️<span class="quiz-tooltip" role="tooltip">Choose the definition that best matches this cloud genus.</span></span></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
+  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does ${definitionQuizCurrent.name} mean? <span class="quiz-help" role="button" tabindex="0" aria-label="Definition quiz instructions" aria-expanded="false" data-tooltip="Choose the definition that best matches this cloud genus.">ℹ️</span></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
   const old=views.quiz.querySelector('#definition-quiz');
   old?old.replaceWith(section):views.quiz.append(section);
   wireQuizHelp(section);
