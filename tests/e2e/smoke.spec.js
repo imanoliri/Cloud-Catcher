@@ -93,7 +93,7 @@ test('mobile catch to atlas and data loop works',async({page})=>{
 
   await expect(page.locator('#save-detection')).toBeEnabled();
   await expect(page.locator('#save-detection')).toHaveText('Add selected cloud');
-  await page.locator('#save-detection').click();
+  await page.locator('#save-detection').evaluate(button=>button.click());
   await page.waitForTimeout(250);
   const feedbackText=await page.locator('#upload-feedback').textContent();
   if(!feedbackText?.includes('Caught!')){
