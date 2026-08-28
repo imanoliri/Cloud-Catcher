@@ -110,10 +110,12 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await expect(page.getByRole('heading',{name:'Level 1 collection'})).toBeVisible();
   await expect(page.locator('.stats .stat strong').first()).toHaveText('1/10');
   await expect(page.getByRole('heading',{name:'Photo journal'})).toBeVisible();
+  await expect(page.locator('.cloud-card:not(.reference-card) .crop-frame')).toBeVisible();
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().detections[0].snippetRef)).toBeUndefined();
 
   await page.getByRole('button',{name:'Data'}).click();
   await expect(page.getByRole('heading',{name:'Stored privately in this browser'})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Export library'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Export / save backup'})).toBeVisible();
   await expect(page.getByText(/1 photos · 1 detections/)).toBeVisible();
 
   await page.reload();
@@ -136,6 +138,8 @@ test('local batch ingestion uses the same persistent atlas',async({page})=>{
   await page.getByRole('button',{name:'Atlas'}).click();
   await expect(page.locator('.stats .stat strong').first()).toHaveText('1/10');
   await expect(page.getByText('batch-cloud.svg',{exact:true})).toBeVisible();
+  await expect(page.locator('.cloud-card:not(.reference-card) .crop-frame')).toBeVisible();
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().detections[0].snippetRef)).toBeUndefined();
   await page.reload();
   expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().sessions.length)).toBe(1);
   expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos.length)).toBe(1);
@@ -152,4 +156,32 @@ test('legacy localStorage atlas migrates to IndexedDB',async({page})=>{
   expect(await page.evaluate(()=>localStorage.getItem('cloud-catcher-library'))).toBeNull();
   await page.reload();
   expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos[0].originalName)).toBe('legacy.jpg');
+});
+
+test('legacy hosted-image archive is rejected with recovery guidance',async({page})=>{
+  const now='2026-08-28T00:00:00.000Z';
+  const archive={
+    format:'cloud-catcher',sessions:[],albums:[],createdAt:now,updatedAt:now,
+    photos:[{id:'legacy-photo',sessionId:null,location:'San Sebastián',observedAt:now,imageRef:'/api/images/00000000-0000-4000-8000-000000000001',originalName:'legacy.jpg',notes:'',source:'legacy',width:100,height:100,createdAt:now}],
+    detections:[],
+  };
+  await page.getByRole('button',{name:'Data'}).click();
+  await page.locator('#import').setInputFiles({name:'legacy.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(archive))});
+  await expect(page.locator('#import-status')).toContainText('Repair the archive first');
+  expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos.length)).toBe(0);
+});
+
+test('export uses native file sharing with download fallback',async({page})=>{
+  await page.getByRole('button',{name:'Data'}).click();
+  await page.evaluate(()=>{
+    Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
+    Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__sharedBackup={name:data.files[0].name,type:data.files[0].type,title:data.title}}});
+  });
+  await page.getByRole('button',{name:'Export / save backup'}).click();
+  await expect.poll(()=>page.evaluate(()=>window.__sharedBackup)).toEqual({name:'cloud-catcher-2026-08-28.json',type:'application/json',title:'Cloud Catcher atlas'});
+
+  await page.evaluate(()=>Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false}));
+  const downloadPromise=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Export / save backup'}).click();
+  expect((await downloadPromise).suggestedFilename()).toBe('cloud-catcher-2026-08-28.json');
 });
