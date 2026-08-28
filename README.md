@@ -4,7 +4,7 @@ A cloud-spotting game where you catch, identify, and collect real clouds, unlock
 
 ## MVP
 
-Cloud Catcher starts with Level 1: the ten principal cloud genera. A real photo is stored once and can contain several cloud detections. Each confirmed detection can unlock its own Cloud Atlas card, while detections inherit the photo's location and date.
+Cloud Catcher starts with Level 1: the ten principal cloud genera. The mobile flow is **Learn → Quiz → Catch → Atlas → Data**. Learn contains the theory/reference material; Quiz has image-identification and definition practice that never changes collection progress. A real photo is stored once and can contain several cloud detections. Each confirmed detection can unlock its own Cloud Atlas card, while detections inherit the photo's location and date.
 
 Completing all ten genera completes the Level 1 collection; catching all ten in the same place also completes a location card for that place.
 
@@ -44,6 +44,16 @@ npm install
 npm run dev
 ```
 
+## Test
+
+```bash
+npm test
+npx playwright install chromium
+npm run test:smoke
+```
+
+`npm run test:all` runs the unit tests followed by the deterministic mobile Playwright smoke suite. CI runs unit tests, the production static build, and the same smoke tests for pull requests and `main`. See [`docs/TESTING.md`](docs/TESTING.md).
+
 ## Build and deploy
 
 ```bash
@@ -61,4 +71,5 @@ Netlify configuration lives in `netlify.toml`. The GitHub repository is connecte
 - [`docs/API.md`](docs/API.md) — hosted and browser REST API contract
 - [`docs/AI_TOOLS.md`](docs/AI_TOOLS.md) — semantic AI tool layer and recommended agent workflow
 - [`docs/GOOGLE_DRIVE.md`](docs/GOOGLE_DRIVE.md) — Google Drive storage adapter
+- [`docs/TESTING.md`](docs/TESTING.md) — deterministic pre-merge verification and smoke-test coverage
 - [`openapi.json`](openapi.json) — machine-readable OpenAPI tool description
