@@ -97,3 +97,23 @@ The MVP HTTP API is intentionally open for reads and writes. Authentication and 
 ## Future fractal taxonomy
 
 Level 1 contains the ten principal cloud genera. Later nodes use `parentId` to subdivide a genus into species, varieties, supplementary features, or other learning groupings. Unlocking is computed from completion rules rather than hard-coded into components.
+
+## Browser views
+
+The mobile-first UI has five top-level views in this order: **Learn → Quiz → Catch → Atlas → Data**.
+
+- **Learn** contains theory, cloud-name decoding, altitude diagrams, the main combinations table, and a **Know them by sight** reference section that is collapsed by default.
+- **Quiz** contains two practice modes: image → genus and genus → definition. Practice never creates detections or advances collection progress. Result feedback overlays the answer area instead of changing document flow, so answering does not move the quiz image or later content.
+- **Catch** creates real local observations from an uploaded photo and supports multiple independently selected regions in one original image.
+- **Atlas** renders progress, caught/reference cards, the photo journal, and location cards.
+- **Data** exports/imports the portable browser library.
+
+`app.js` is the single owner of Learn/Quiz view rendering and navigation. Small enhancement modules such as `cloud-diagrams.js`, `region-selector.js`, and `atlas-viewer.js` augment already-rendered DOM rather than owning competing page renderers.
+
+## Static build and verification
+
+Netlify publishes `dist`, so every browser asset referenced by `index.html` must be explicitly copied by `npm run build`. The repository contains a guard test for this contract because an omitted CSS/JS asset can otherwise produce a successful but incomplete deploy.
+
+Deterministic browser smoke tests use Playwright mobile Chromium against a locally built `dist` directory. They fix quiz randomness, replace remote learning images with deterministic fixtures, and stub hosted API reads. This keeps the tests independent of external image hosts and persisted Netlify data while still exercising the real browser application.
+
+The pre-merge verification contract is documented in [`docs/TESTING.md`](docs/TESTING.md).
