@@ -6,6 +6,8 @@ test('static build copies every browser asset referenced by index',async()=>{
   const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
   const index=await readFile(new URL('../index.html',import.meta.url),'utf8');
   const build=pkg.scripts.build;
+  assert.match(build,/rm -rf dist/,'build must remove stale deployment artifacts');
+  assert.doesNotMatch(build,/openapi\.json/);
   for(const asset of ['app.js','cloud-diagrams.js','styles.css','learn-mode.css','definition-quiz.css','quiz-page.css','atlas-viewer.js','atlas-viewer.css','region-selector.js','region-selector.css']){
     assert.match(build,new RegExp(asset.replaceAll('.','\\.')),asset);
   }
