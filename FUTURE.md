@@ -250,3 +250,16 @@ Future features should preserve these existing decisions:
 6. **Derived analytics stay derived.** Frequencies, seasonal profiles, co-occurrence relationships and similar statistics should normally be recomputed from canonical photos/sessions/detections rather than stored as duplicate truth.
 7. **Personal observations and external climatology stay distinct.** Do not present sampling-biased personal catches as objective local climate data, and do not mix external weather datasets into collection progress.
 8. **Keep the MVP understandable.** Prefer completing the field-observation loop before adding social, competitive or highly elaborate mechanics.
+
+## Priority 6 — Learning mastery
+
+### F24 — Quiz mastery and spaced repetition
+
+**Goal:** Build on the current stateless image-identification and definition quizzes so practice adapts to what the user actually finds difficult.
+
+**Acceptance criteria:**
+- Track practice results separately from real Cloud Atlas catches.
+- Show optional accuracy/streak history without turning practice into collection progress.
+- Prefer genera the user frequently confuses while still revisiting mastered genera.
+- Keep both current quiz modes available: image → genus and genus → definition.
+- Allow resetting practice history without affecting photos, detections, sessions, albums, or location progress.
