@@ -68,4 +68,4 @@ Before squash-merging a feature branch, require:
 - Netlify Deploy Preview successful for the exact PR head;
 - no unresolved known regression in Learn, Quiz, Catch, Atlas, or Data.
 
-The browser tests are the repeatable smoke gate. Manual preview inspection remains useful for visual judgment, but it is not the only verification mechanism.
+The browser tests are the repeatable smoke gate. The Catch smoke test deterministically verifies upload + gesture selection, then uses the supported `window.cloudCatcher` API for persistence so CI does not depend on browser canvas/image-codec timing. Domain tests separately cover photo/detection relationships and confirmed-progress rules. Manual preview inspection remains useful for visual judgment, but it is not the only verification mechanism.
