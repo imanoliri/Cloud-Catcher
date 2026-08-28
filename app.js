@@ -19,13 +19,48 @@ const thumbnailUrl=(src,width=220)=>src.replace(/([?&])width=\d+/i,`$1width=${wi
 
 const learnExamples=type=>type.referenceImages?.length?type.referenceImages:[{image:type.referenceImage,page:type.referencePage}];
 function chooseLearnQuestion(){learnCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];learnExampleIndex=Math.floor(Math.random()*learnExamples(learnCurrent).length);learnAnswered=false}
+function cloudGuide(){
+  const meanings=[
+    ['cirro-','High','High, thin clouds, usually made mostly of ice crystals.'],
+    ['alto-','Middle','Mid-level clouds. Despite the name, alto means the middle cloud étage.'],
+    ['stratus','Layer','A flat sheet, veil, or blanket of cloud.'],
+    ['cumulus','Heap','Puffy, piled-up cloud with rounded or cauliflower shapes.'],
+    ['nimbo- / -nimbus','Rain','A cloud associated with precipitation.']
+  ];
+  const rows=[
+    ['High','Cirrostratus','Cirrocumulus','Cirrus'],
+    ['Middle','Altostratus','Altocumulus','—'],
+    ['Low','Stratus','Stratocumulus','Nimbostratus'],
+    ['Vertical','—','Cumulus','Cumulonimbus']
+  ];
+  return `<section class="cloud-guide" aria-labelledby="cloud-guide-title">
+    <div class="guide-intro">
+      <p class="eyebrow">Field guide</p>
+      <h2 id="cloud-guide-title">How clouds form & how their names work</h2>
+      <p>Clouds form when moist air rises and cools to its dew point. Water vapour then condenses onto tiny particles such as dust or sea salt, making droplets or ice crystals visible as a cloud.</p>
+    </div>
+    <div class="guide-section">
+      <h3>Decode the name</h3>
+      <div class="guide-table-wrap"><table class="guide-table"><thead><tr><th>Name part</th><th>Think</th><th>Meaning</th></tr></thead><tbody>${meanings.map(([part,think,meaning])=>`<tr><td><strong>${part}</strong></td><td>${think}</td><td>${meaning}</td></tr>`).join('')}</tbody></table></div>
+      <p class="guide-example"><strong>Example:</strong> <em>Altocumulus</em> = middle-level + heaps, so look for patches or rows of medium-height puffy clouds.</p>
+    </div>
+    <div class="guide-section">
+      <h3>The main combinations</h3>
+      <div class="guide-table-wrap"><table class="guide-table combination-table"><thead><tr><th>Height / growth</th><th>Layered</th><th>Puffy / heaped</th><th>Special</th></tr></thead><tbody>${rows.map(row=>`<tr>${row.map((cell,i)=>`<${i?'td':'th'}>${cell}</${i?'td':'th'}>`).join('')}</tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="guide-section">
+      <h3>Know them by sight</h3>
+      <div class="guide-cloud-grid">${LEVEL_ONE.map(c=>`<article class="guide-cloud-card"><img src="${thumbnailUrl(c.referenceImage,360)}" alt="Reference example of ${escapeHtml(c.name)}" loading="lazy" decoding="async"><div><p class="cloud-code">${c.code} · ${c.family}</p><h4>${c.name}</h4><p>${c.summary}</p><p class="guide-clue"><strong>Look for:</strong> ${c.clue}</p></div></article>`).join('')}</div>
+    </div>
+  </section>`;
+}
 function renderLearn(){
   if(!learnCurrent)chooseLearnQuestion();
   const choices=shuffle([learnCurrent,...shuffle(LEVEL_ONE.filter(c=>c.id!==learnCurrent.id)).slice(0,3)]);
   const examples=learnExamples(learnCurrent);
   const learnExample=examples[learnExampleIndex];
   const learnImage=thumbnailUrl(learnExample.image,220);
-  views.learn.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>Practice identifying the ten principal cloud genera. Quiz answers never create catches or change Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${learnImage}" alt="Cloud identification practice example ${learnExampleIndex+1} of ${examples.length}" decoding="async" fetchpriority="high"><span class="reference-badge">Example ${learnExampleIndex+1} of ${examples.length}</span></div></div>`;
+  views.learn.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>Practice identifying the ten principal cloud genera. Quiz answers never create catches or change Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${learnImage}" alt="Cloud identification practice example ${learnExampleIndex+1} of ${examples.length}" decoding="async" fetchpriority="high"><span class="reference-badge">Example ${learnExampleIndex+1} of ${examples.length}</span></div></div>${cloudGuide()}`;
   views.learn.querySelectorAll('[data-learn-choice]').forEach(b=>b.addEventListener('click',()=>answerLearn(b.dataset.learnChoice)));
 }
 function answerLearn(id){
