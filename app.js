@@ -67,6 +67,16 @@ function chooseDefinitionQuizQuestion(){
   definitionQuizCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];
   definitionQuizAnswered=false;
 }
+function wireQuizHelp(section){
+  section.querySelectorAll('.quiz-help').forEach(help=>help.addEventListener('click',event=>{
+    event.stopPropagation();
+    const open=help.getAttribute('aria-expanded')==='true';
+    views.quiz.querySelectorAll('.quiz-help[aria-expanded="true"]').forEach(other=>other.setAttribute('aria-expanded','false'));
+    help.setAttribute('aria-expanded',String(!open));
+  }));
+}
+document.addEventListener('click',()=>views.quiz?.querySelectorAll('.quiz-help[aria-expanded="true"]').forEach(help=>help.setAttribute('aria-expanded','false')));
+
 function renderImageQuiz(){
   if(!imageQuizCurrent)chooseImageQuizQuestion();
   const examples=learnExamples(imageQuizCurrent);
@@ -75,9 +85,10 @@ function renderImageQuiz(){
   const section=document.createElement('section');
   section.id='image-quiz';
   section.className='image-quiz panel';
-  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2 class="quiz-question">Which cloud is this? <button class="quiz-help" type="button" aria-label="Identification quiz instructions">ℹ️<span class="quiz-help-popover">Choose the cloud genus that best matches the picture.</span></button></h2><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
+  section.innerHTML=`<div class="image-quiz-copy"><p class="eyebrow">Quiz · Identification</p><h2 class="quiz-question">Which cloud is this? <button class="quiz-help" type="button" aria-label="Identification quiz instructions" aria-expanded="false" data-tooltip="Choose the cloud genus that best matches the picture.">ℹ️</button></h2><div class="choices">${choices.map(c=>`<button type="button" data-image-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="image-feedback" aria-live="polite"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${thumbnailUrl(example.image,220)}" alt="Cloud identification quiz example ${imageQuizExampleIndex+1} of ${examples.length}" decoding="async"><span class="reference-badge">Example ${imageQuizExampleIndex+1} of ${examples.length}</span></div>`;
   const old=views.quiz.querySelector('#image-quiz');
   old?old.replaceWith(section):views.quiz.prepend(section);
+  wireQuizHelp(section);
   section.querySelectorAll('[data-image-choice]').forEach(b=>b.addEventListener('click',()=>answerImageQuiz(b.dataset.imageChoice)));
 }
 function answerImageQuiz(id){
@@ -96,9 +107,10 @@ function renderDefinitionQuiz(){
   const section=document.createElement('section');
   section.id='definition-quiz';
   section.className='definition-quiz panel';
-  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does ${definitionQuizCurrent.name} mean? <button class="quiz-help" type="button" aria-label="Definition quiz instructions">ℹ️<span class="quiz-help-popover">Choose the definition that best matches this cloud genus.</span></button></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
+  section.innerHTML=`<p class="eyebrow">Quiz · Definitions</p><h2 class="quiz-question">What does ${definitionQuizCurrent.name} mean? <button class="quiz-help" type="button" aria-label="Definition quiz instructions" aria-expanded="false" data-tooltip="Choose the definition that best matches this cloud genus.">ℹ️</button></h2><div class="definition-choices">${choices.map(c=>`<button type="button" data-definition-choice="${c.id}">${c.summary}</button>`).join('')}</div><div id="definition-feedback" aria-live="polite"></div>`;
   const old=views.quiz.querySelector('#definition-quiz');
   old?old.replaceWith(section):views.quiz.append(section);
+  wireQuizHelp(section);
   section.querySelectorAll('[data-definition-choice]').forEach(b=>b.addEventListener('click',()=>answerDefinitionQuiz(b.dataset.definitionChoice)));
 }
 function answerDefinitionQuiz(id){
