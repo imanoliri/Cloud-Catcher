@@ -108,9 +108,6 @@ function setupSelector(){
 }
 
 new MutationObserver(()=>setupSelector()).observe(catchView,{childList:true,subtree:true});
-new MutationObserver(()=>{
-  const feedback=catchView.querySelector('#upload-feedback');
-  if(feedback?.textContent?.includes('Caught!')&&active?.valid)clearSelection('Caught. Drag over another cloud in this same photo to add another region.');
-}).observe(catchView,{childList:true,subtree:true,characterData:true});
+window.addEventListener('cloud-catcher-saved',()=>clearSelection('Caught. Drag over another cloud in this same photo to add another region.'));
 
 setupSelector();

@@ -240,6 +240,7 @@ async function saveRealDetection(){
     const detection=makeDetection({photoId:pendingImage.photoId,cloudTypeId,confidence:Number(views.catch.querySelector('#det-confidence').value)/100,region,status:'confirmed',source:'manual-upload'});
     library=addDetection(library,detection);
     feedback.innerHTML=`<div class="feedback"><strong>Caught!</strong> ${getCloudType(detection.cloudTypeId).name} added. Drag another region on this photo to add another cloud.</div>`;
+    window.dispatchEvent(new CustomEvent('cloud-catcher-saved'));
     await storage.saveLibrary(library);
   }catch(error){
     library=previousLibrary;pendingImage.photoId=previousPhotoId;
