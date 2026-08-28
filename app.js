@@ -8,6 +8,7 @@ let activeView='learn';
 let library=null;
 let pendingImage=null;
 let learnCurrent=null;
+let learnExampleIndex=0;
 let learnAnswered=false;
 
 const escapeHtml=(v='')=>String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
@@ -16,12 +17,15 @@ const fileDataUrl=file=>new Promise((resolve,reject)=>{const r=new FileReader();
 const imageSize=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve({width:img.naturalWidth,height:img.naturalHeight});img.onerror=reject;img.src=src});
 const thumbnailUrl=(src,width=220)=>src.replace(/([?&])width=\d+/i,`$1width=${width}`);
 
-function chooseLearnQuestion(){learnCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];learnAnswered=false}
+const learnExamples=type=>type.referenceImages?.length?type.referenceImages:[{image:type.referenceImage,page:type.referencePage}];
+function chooseLearnQuestion(){learnCurrent=LEVEL_ONE[Math.floor(Math.random()*LEVEL_ONE.length)];learnExampleIndex=Math.floor(Math.random()*learnExamples(learnCurrent).length);learnAnswered=false}
 function renderLearn(){
   if(!learnCurrent)chooseLearnQuestion();
   const choices=shuffle([learnCurrent,...shuffle(LEVEL_ONE.filter(c=>c.id!==learnCurrent.id)).slice(0,3)]);
-  const learnImage=thumbnailUrl(learnCurrent.referenceImage,220);
-  views.learn.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>Practice identifying the ten principal cloud genera. Quiz answers never create catches or change Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${learnImage}" alt="Cloud identification practice" decoding="async" fetchpriority="high"><span class="reference-badge">Practice</span></div></div>`;
+  const examples=learnExamples(learnCurrent);
+  const learnExample=examples[learnExampleIndex];
+  const learnImage=thumbnailUrl(learnExample.image,220);
+  views.learn.innerHTML=`<div class="hero learn-hero"><div><p class="eyebrow">Learn · Level 1</p><h2>Learn the cloud genera</h2><p>Practice identifying the ten principal cloud genera. Quiz answers never create catches or change Atlas progress.</p><div class="choices">${choices.map(c=>`<button data-learn-choice="${c.id}">${c.name}</button>`).join('')}</div><div id="learn-feedback"></div></div><div class="learn-photo-wrap"><img class="learn-photo" src="${learnImage}" alt="Cloud identification practice example ${learnExampleIndex+1} of ${examples.length}" decoding="async" fetchpriority="high"><span class="reference-badge">Example ${learnExampleIndex+1} of ${examples.length}</span></div></div>`;
   views.learn.querySelectorAll('[data-learn-choice]').forEach(b=>b.addEventListener('click',()=>answerLearn(b.dataset.learnChoice)));
 }
 function answerLearn(id){
