@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addCatch,addDetection,addPhoto,addSession,emptyLibrary,levelProgress,makeDetection,makePhoto,makeSession,validateLibrary} from '../src/domain.js';
+import {LEVEL_ONE} from '../src/taxonomy.js';
 
 function addConfirmed(lib,cloudTypeId,location='San Sebastián'){
   const photo=makePhoto({location,source:'test'});
@@ -48,4 +49,12 @@ test('archive validation requires current session/photo/detection schema',()=>{
   assert.throws(()=>validateLibrary({foo:'bar'}));
   assert.throws(()=>validateLibrary({format:'cloud-catcher',photos:[],detections:[],albums:[]}));
   assert.doesNotThrow(()=>validateLibrary(emptyLibrary()));
+});
+
+
+test('each Level 1 cloud genus has three distinct learning examples',()=>{
+  for(const type of LEVEL_ONE){
+    assert.equal(type.referenceImages.length,3,type.id);
+    assert.equal(new Set(type.referenceImages.map(example=>example.image)).size,3,type.id);
+  }
 });
