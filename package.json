@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "build": "rm -rf dist && mkdir -p dist/src && cp index.html styles.css app.js atlas-viewer.js atlas-viewer.css region-selector.js region-selector.css catch-flow.css learn-mode.css cloud-diagrams.js definition-quiz.css quiz-page.css dist/ && cp src/*.js dist/src/",
+    "build": "rm -rf dist && mkdir -p dist/src && cp index.html styles.css app.js atlas-viewer.js atlas-viewer.css region-selector.js region-selector.css learn-mode.css cloud-diagrams.js definition-quiz.css quiz-page.css dist/ && cp src/*.js dist/src/",
     "repair:legacy-archive": "node scripts/repair-legacy-archive.mjs",
     "test": "node --test tests/*.test.js",
     "test:smoke": "playwright test",

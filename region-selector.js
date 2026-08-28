@@ -5,13 +5,11 @@ let active=null;
 function clamp(v){return Math.max(0,Math.min(1,v))}
 function setField(id,value){const input=document.querySelector(id);if(input)input.value=String(Math.round(value*1000)/10)}
 function syncRegion(region){setField('#det-x',region.x);setField('#det-y',region.y);setField('#det-w',region.width);setField('#det-h',region.height)}
-function showStep(step){window.dispatchEvent(new CustomEvent('cloud-catcher-step',{detail:step}))}
 function updateSaveState(){
   if(!active)return;
   const classified=Boolean(active.type.value);
   active.save.disabled=!active.valid||!classified;
   active.save.textContent=!active.valid?'Select a cloud region first':classified?'Save cloud':'Choose its cloud type';
-  showStep(!active.valid?2:classified?4:3);
 }
 
 function clearSelection(message='Drag over a cloud to select the next region.'){
@@ -112,7 +110,7 @@ function setupSelector(){
 new MutationObserver(()=>setupSelector()).observe(catchView,{childList:true,subtree:true});
 new MutationObserver(()=>{
   const feedback=catchView.querySelector('#upload-feedback');
-  if(feedback?.textContent?.includes('Caught!'))clearSelection('Caught. Drag over another cloud in this same photo to add another region.');
+  if(feedback?.textContent?.includes('Caught!')&&active?.valid)clearSelection('Caught. Drag over another cloud in this same photo to add another region.');
 }).observe(catchView,{childList:true,subtree:true,characterData:true});
 
 setupSelector();

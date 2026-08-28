@@ -73,12 +73,10 @@ test('mobile learn and quiz flows are stable',async({page})=>{
 test('mobile catch to atlas and data loop works',async({page})=>{
   await page.getByRole('button',{name:'Catch'}).click();
   await expect(page.getByRole('heading',{name:'Catch clouds from a photo'})).toBeVisible();
-  await expect(page.locator('.catch-step.current')).toHaveText(/1Photo/);
 
   await page.locator('#photo-file').setInputFiles({name:'cloud.svg',mimeType:'image/svg+xml',buffer:Buffer.from(tinySvg)});
   const selector=page.locator('.region-selector');
   await expect(selector).toBeVisible();
-  await expect(page.locator('.catch-step.current')).toHaveText(/2Select/);
   await expect(page.locator('#save-detection')).toBeDisabled();
 
   const box=await selector.boundingBox();
@@ -88,30 +86,19 @@ test('mobile catch to atlas and data loop works',async({page})=>{
   await page.mouse.move(box.x+box.width*0.75,box.y+box.height*0.7,{steps:5});
   await page.mouse.up();
 
-  await expect(page.locator('.catch-step.current')).toHaveText(/3Classify/);
   await expect(page.locator('#save-detection')).toBeDisabled();
   await expect(page.locator('#save-detection')).toHaveText('Choose its cloud type');
   await page.locator('#det-type').selectOption('cumulus');
-  await expect(page.locator('.catch-step.current')).toHaveText(/4Save/);
   await expect(page.locator('#save-detection')).toBeEnabled();
   await expect(page.locator('#save-detection')).toHaveText('Save cloud');
 
-  await page.evaluate(async()=>{
-    const photo=await window.cloudCatcher.addPhoto({
-      location:'Smoke Test',
-      imageRef:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"></svg>',
-      originalName:'cloud.svg',
-      source:'playwright'
-    });
-    await window.cloudCatcher.addDetection({
-      photoId:photo.id,
-      cloudTypeId:'cumulus',
-      confidence:1,
-      status:'confirmed',
-      region:{type:'rect',x:.2,y:.2,width:.55,height:.5},
-      source:'playwright'
-    });
+  const immediateFeedback=await page.evaluate(()=>{
+    document.querySelector('#save-detection').click();
+    return {button:document.querySelector('#save-detection').textContent,status:document.querySelector('#upload-feedback').textContent};
   });
+  expect(immediateFeedback).toEqual({button:'Saving cloud…',status:'Caught! Cumulus added. Drag another region on this photo to add another cloud.'});
+  await expect(page.locator('#upload-feedback')).toContainText('Caught!');
+  await expect.poll(()=>page.evaluate(()=>window.cloudCatcher.getLibrary().detections.length)).toBe(1);
 
   await page.getByRole('button',{name:'Atlas'}).click();
   await expect(page.getByRole('heading',{name:'Level 1 collection'})).toBeVisible();
