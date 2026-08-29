@@ -19,17 +19,17 @@ Cloud Catcher is an offline-first cloud-identification and collection game with 
 
 - The MVP has exactly one live atlas: `BrowserStorageProvider` in IndexedDB.
 - Never add a second hosted, preview-specific or silently merged atlas.
-- Netlify serves static application assets only. Do not add Netlify Blobs, hosted photo storage, public REST writes, Functions or remote MCP without explicit product authorization and a complete ownership/authentication design.
+- IndexedDB remains the only live Atlas. Netlify Blobs may hold only expiring relay sessions, commands and results; never store photos or an Atlas there.
 - Preserve automatic migration of the legacy `cloud-catcher-library` localStorage record.
 - Keep JSON export/import self-contained and provider-independent.
-- Browser data must not leave the device unless the user explicitly exports it or enables a future private provider.
+- Browser data must not leave the device unless the user explicitly exports it, enables a future private provider, or an active local-agent relay returns an explicitly requested result.
 - Google Drive is a future optional provider for the same logical atlas, not a parallel collection.
 
 ## Browser automation
 
 AI/browser clients use `window.cloudCatcher`. Prefer `importCloudPhotos` for batch ingestion, `updateDetection` for corrections and `addDetection` for newly found regions. Use normalized `0..1` regions. Use `proposed` for uncertain identifications and `confirmed` only when reliable.
 
-There is intentionally no hosted `/api`, `/ai-tools`, OpenAPI or `/mcp` service in the MVP. An agent must operate through the authorized local page or provide an archive for explicit import.
+The local-agent relay is the supported remote API. It starts automatically when Cloud Catcher opens, but commands are processed only while that page remains open. Agents receive a temporary token from the Data page and can call allow-listed operations through the relay. Do not add a second hosted Atlas.
 
 ## Key files
 

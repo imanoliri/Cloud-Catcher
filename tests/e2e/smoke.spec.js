@@ -14,6 +14,12 @@ test.beforeEach(async({page})=>{
     }
     return route.abort();
   });
+  await page.route('**/api/relay/**',route=>{
+    const request=route.request(),path=new URL(request.url()).pathname;
+    if(path==='/api/relay/sessions'&&request.method()==='POST')return route.fulfill({contentType:'application/json',body:JSON.stringify({sessionId:'relay-test',browserToken:'browser-token',agentToken:'agent-token',expiresAt:'2099-01-01T00:00:00.000Z'})});
+    if(path==='/api/relay/browser/relay-test')return route.fulfill({contentType:'application/json',body:'{"commandId":null}'});
+    return route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+  });
   await page.goto('/');
 });
 
@@ -149,6 +155,13 @@ test('local batch ingestion uses the same persistent atlas',async({page})=>{
   expect(await page.evaluate(()=>window.cloudCatcher.getLibrary().photos.length)).toBe(1);
 });
 
+test('opening Cloud Catcher automatically creates a local agent relay',async({page})=>{
+  await page.getByRole('button',{name:'Data'}).click();
+  await expect(page.getByRole('heading',{name:'Agent API'})).toBeVisible();
+  await expect(page.locator('#agent-connection')).toContainText('relay-test');
+  await expect(page.getByText('Ready for an authorized agent.')).toBeVisible();
+});
+
 test('legacy localStorage atlas migrates to IndexedDB',async({page})=>{
   await page.evaluate(()=>{
     localStorage.setItem('cloud-catcher-library',JSON.stringify({
@@ -182,10 +195,11 @@ test('export uses native file sharing with download fallback',async({page})=>{
     Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__sharedBackup={name:data.files[0].name,type:data.files[0].type,title:data.title}}});
   });
   await page.getByRole('button',{name:'Export / save backup'}).click();
-  await expect.poll(()=>page.evaluate(()=>window.__sharedBackup)).toEqual({name:'cloud-catcher-2026-08-28.json',type:'application/json',title:'Cloud Catcher atlas'});
+  const backupName=`cloud-catcher-${new Date().toISOString().slice(0,10)}.json`;
+  await expect.poll(()=>page.evaluate(()=>window.__sharedBackup)).toEqual({name:backupName,type:'application/json',title:'Cloud Catcher atlas'});
 
   await page.evaluate(()=>Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false}));
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export / save backup'}).click();
-  expect((await downloadPromise).suggestedFilename()).toBe('cloud-catcher-2026-08-28.json');
+  expect((await downloadPromise).suggestedFilename()).toBe(backupName);
 });

@@ -11,7 +11,10 @@
     "test:smoke": "playwright test",
     "test:all": "npm test && npm run test:smoke"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@netlify/blobs": "^11.0.2",
+    "@netlify/functions": "^6.0.0"
+  },
   "devDependencies": {
     "netlify-cli": "^23.6.0",
     "@playwright/test": "1.55.0"

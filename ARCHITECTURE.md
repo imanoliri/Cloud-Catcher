@@ -40,7 +40,7 @@ On first load, a legacy `cloud-catcher-library` localStorage value is validated,
 
 `window.cloudCatcher` is the supported integration boundary. `importCloudPhotos` accepts optional session/default metadata and multiple photos/detections and persists once. Crops are rendered locally from each original and detection region. Smaller mutation operations support corrections and incremental classification.
 
-An agent must operate through an authorized browser session or produce a Cloud Catcher JSON archive for explicit import. There is intentionally no public remote write endpoint.
+When Cloud Catcher opens it creates a temporary relay session. An authorized remote agent submits a command to the relay, the open browser polls and executes it through `window.cloudCatcher`, then returns the result. The relay stores only expiring hashed-token sessions plus temporary commands/results. It rejects commands when the browser has not checked in recently, and never stores the Atlas or photos.
 
 Backup transfer uses browser capabilities rather than a Drive API integration: supported mobile browsers open the native share sheet for exports, and imports use the native file picker. Google Drive may appear there as an installed/system provider, but Cloud Catcher receives no account-level Drive access. Unsupported share environments fall back to a download.
 
