@@ -1,6 +1,7 @@
 import {LEVEL_ONE,getCloudType} from './src/taxonomy.js';
 import {addDetection,addPhoto,addSession,levelProgress,locationCollections,makeDetection,makePhoto,makeSession,updateDetection} from './src/domain.js';
 import {BrowserStorageProvider,downloadBlob} from './src/storage.js';
+import {LocalAgentRelay} from './src/local-agent-relay.js';
 
 const storage=new BrowserStorageProvider();
 const views={learn:document.querySelector('#learn-view'),quiz:document.querySelector('#quiz-view'),catch:document.querySelector('#catch-view'),atlas:document.querySelector('#atlas-view'),data:document.querySelector('#data-view')};
@@ -12,6 +13,8 @@ let imageQuizExampleIndex=0;
 let imageQuizAnswered=false;
 let definitionQuizCurrent=null;
 let definitionQuizAnswered=false;
+let localAgentRelay=null;
+let relayState={ready:false};
 
 const escapeHtml=(v='')=>String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
 const shuffle=a=>[...a].sort(()=>Math.random()-.5);
@@ -265,7 +268,7 @@ async function shareOrDownloadArchive(){
   }
   downloadBlob(blob,filename);
 }
-function renderData(){const proposed=library.detections.filter(d=>d.status==='proposed').length;views.data.innerHTML=`<div class="panel"><p class="eyebrow">Your data</p><h2>Stored privately in this browser</h2><p>Your atlas and photos stay on this device. Export opens your system share/save dialog, where you can choose Google Drive. Import opens the system file picker, where you can browse Drive and select a backup.</p><div class="toolbar"><button id="export" class="primary">Export / save backup</button><label class="button file-label">Import from files / Drive<input id="import" type="file" accept="application/json,.json"></label></div><p id="import-status" role="status"></p><p><b>${library.photos.length}</b> photos · <b>${library.detections.length}</b> detections · <b>${proposed}</b> awaiting confirmation</p></div>`;views.data.querySelector('#export').addEventListener('click',shareOrDownloadArchive);views.data.querySelector('#import').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const status=views.data.querySelector('#import-status');try{library=await storage.importArchive(file);await storage.saveLibrary(library);renderData()}catch(error){status.textContent=error instanceof Error?error.message:'The archive could not be imported.';e.target.value=''}})}
+function renderData(){const proposed=library.detections.filter(d=>d.status==='proposed').length;views.data.innerHTML=`<div class="panel"><p class="eyebrow">Your data</p><h2>Stored privately in this browser</h2><p>Your atlas and photos stay on this device. Export opens your system share/save dialog, where you can choose Google Drive. Import opens the system file picker, where you can browse Drive and select a backup.</p><div class="toolbar"><button id="export" class="primary">Export / save backup</button><label class="button file-label">Import from files / Drive<input id="import" type="file" accept="application/json,.json"></label></div><p id="import-status" role="status"></p><p><b>${library.photos.length}</b> photos · <b>${library.detections.length}</b> detections · <b>${proposed}</b> awaiting confirmation</p><hr><h2>Agent API</h2><p>This app created a fresh temporary relay when it opened. It remains usable only while this Cloud Catcher tab stays open.</p>${relayState.ready?`<textarea id="agent-connection" readonly rows="5" aria-label="Agent API connection">${escapeHtml(relayState.connection)}</textarea><div class="toolbar"><button id="copy-agent-connection" class="primary">Copy agent API connection</button></div><p id="agent-api-status" role="status">${relayState.lastCommand?`Last agent request: ${escapeHtml(relayState.lastCommand)}`:'Ready for an authorized agent.'}</p>`:`<p id="agent-api-status" role="status">${escapeHtml(relayState.error||'Creating local agent relay…')}</p>`}</div>`;views.data.querySelector('#export').addEventListener('click',shareOrDownloadArchive);views.data.querySelector('#copy-agent-connection')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(relayState.connection);views.data.querySelector('#agent-api-status').textContent='Agent API connection copied.'}catch{views.data.querySelector('#agent-api-status').textContent='Select and copy the connection text above.'}});views.data.querySelector('#import').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const status=views.data.querySelector('#import-status');try{library=await storage.importArchive(file);await storage.saveLibrary(library);renderData()}catch(error){status.textContent=error instanceof Error?error.message:'The archive could not be imported.';e.target.value=''}})}
 
 async function importCloudPhotos({session=null,defaults={},catches=[]}){
   let sessionRecord=null;
@@ -291,3 +294,6 @@ async function importCloudPhotos({session=null,defaults={},catches=[]}){
 }
 
 window.cloudCatcher={getLibrary:()=>structuredClone(library),getCloudTypes:()=>structuredClone(LEVEL_ONE),getProgress:(location=null)=>levelProgress(library,1,location),importCloudPhotos,addPhoto:async data=>{const p=makePhoto(data);library=addPhoto(library,p);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(p)},addDetection:async data=>{const d=makeDetection(data);library=addDetection(library,d);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(d)},updateDetection:async(id,patch)=>{library=updateDetection(library,id,patch);await storage.saveLibrary(library);if(activeView==='atlas')renderAtlas();return structuredClone(library.detections.find(d=>d.id===id))}};
+localAgentRelay=new LocalAgentRelay({api:window.cloudCatcher,onState:state=>{relayState={...relayState,...state};if(activeView==='data')renderData()}});
+localAgentRelay.start().catch(error=>{relayState={ready:false,error:error instanceof Error?error.message:'Could not create the local agent relay'};if(activeView==='data')renderData()});
+window.addEventListener('pagehide',()=>localAgentRelay.stop());

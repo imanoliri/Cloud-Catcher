@@ -14,7 +14,7 @@ Status reflects the current browser-local MVP.
 | Sessions | Partial | Domain and batch import support sessions. | No session-management UI. |
 | Export and restore | Works | Export opens the system share/save sheet when file sharing is supported, otherwise downloads the self-contained JSON. Import uses the system file picker, including available Drive providers. | Import replaces the current atlas; large libraries may produce large backup files. |
 | Keep data across deployments | Works | IndexedDB remains on the same site origin across static deployments and branch updates. | Different preview hostnames, browsers and devices do not share data. |
-| Use through AI/API | Partial | The local `window.cloudCatcher` API supports structured ingestion and correction without a second atlas. | Agent needs an authorized browser session or must generate an import archive. |
+| Use through AI/API | Works while app is open | The local API relay lets an authorized agent inspect and correct the same browser Atlas. | Cloud Catcher must stay open; sessions are temporary. |
 
 ## Verified rules
 

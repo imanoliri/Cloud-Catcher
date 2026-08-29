@@ -14,7 +14,8 @@ The MVP has exactly one atlas: the library stored in the current browser using I
 
 - Website catches and `window.cloudCatcher` automation write to that same library.
 - Original photos, crop coordinates, sessions, detections and albums stay on the device. Crops are rendered from their original photo instead of storing duplicate image bytes.
-- There is no hosted photo API, Netlify Blob store, public write endpoint or background server synchronization.
+- There is no hosted photo Atlas, public permanent-write endpoint, or background synchronization. Netlify Blobs is used only as the temporary relay mailbox.
+- Cloud Catcher creates a temporary local-agent relay whenever it opens. It keeps only short-lived commands/results in Netlify Blobs; the browser's IndexedDB remains the Atlas. Open **Data** to copy the temporary agent API connection.
 - Data export produces a self-contained JSON backup; import restores it.
 - On supported phones, Export opens the system share/save sheet so Google Drive or another installed destination can receive the backup without OAuth. Import uses the system file picker, which can browse Drive. Other browsers fall back to a normal download.
 - Import refuses older exports that still point at the retired hosted image API, instead of silently showing a broken atlas. Recover those archives once with `npm run repair:legacy-archive -- INPUT OUTPUT --legacy-origin URL`; the repaired copy embeds each original and keeps a crop image only when its original is unavailable.
