@@ -10,7 +10,9 @@ test('static build copies every browser asset referenced by index',async()=>{
   assert.doesNotMatch(build,/openapi\.json/);
   for(const asset of ['app.js','cloud-diagrams.js','styles.css','learn-mode.css','definition-quiz.css','quiz-page.css','atlas-viewer.js','atlas-viewer.css','region-selector.js','region-selector.css']){
     assert.match(build,new RegExp(asset.replaceAll('.','\\.')),asset);
+    assert.match(index,new RegExp(`\\.\\/${asset.replaceAll('.','\\.')}`),`index.html must use relative path ./${asset}`);
   }
+  assert.match(build,/src\/\*\.js/);
   for(const legacy of ['quiz-page.js','definition-quiz.js','learn-mode.js','performance.js']){
     assert.doesNotMatch(index,new RegExp(legacy.replaceAll('.','\\.')),legacy);
   }

@@ -38,7 +38,9 @@ async function databaseOperation(mode,operation){
     transaction.onerror=()=>reject(transaction.error);
   })}finally{database.close()}
 }
+
 export class BrowserStorageProvider{
+  mode='browser';
   async loadLibrary(){const stored=await databaseOperation('readonly',store=>store.get(KEY));if(stored)return validateLibrary(stored);const legacy=localStorage.getItem(KEY);if(!legacy)return emptyLibrary();const library=validateLibrary(JSON.parse(legacy));await this.saveLibrary(library);localStorage.removeItem(KEY);return library}
   async saveLibrary(library){const saved={...canonicalizeLibraryMedia(validateLibrary(library)),updatedAt:new Date().toISOString()};await databaseOperation('readwrite',store=>store.put(saved,KEY));return saved}
   async exportArchive(library){return new Blob([JSON.stringify(canonicalizeLibraryMedia(validateLibrary(library)),null,2)],{type:'application/json'})}
@@ -49,6 +51,64 @@ export class BrowserStorageProvider{
     return library;
   }
 }
+
+export class LifeOsStorageProvider{
+  mode='lifeos';
+  constructor({baseUrl='/api/clouds'}={}){
+    this.baseUrl=String(baseUrl||'/api/clouds').replace(/\/+$/,'');
+  }
+  async loadLibrary(){
+    const r=await fetch(`${this.baseUrl}/library`,{credentials:'same-origin'});
+    if(!r.ok)throw new Error(`LifeOS atlas load failed (${r.status})`);
+    const data=await r.json();
+    return validateLibrary(data.library||data);
+  }
+  async saveLibrary(library){
+    const clean=canonicalizeLibraryMedia(validateLibrary(library));
+    const r=await fetch(`${this.baseUrl}/library`,{
+      method:'PUT',
+      credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(clean),
+    });
+    if(!r.ok)throw new Error(`LifeOS atlas save failed (${r.status})`);
+    const data=await r.json();
+    return validateLibrary(data.library||clean);
+  }
+  async exportArchive(library){
+    try{
+      const r=await fetch(`${this.baseUrl}/library?embed_images=1`,{credentials:'same-origin'});
+      if(r.ok){
+        const data=await r.json();
+        const lib=canonicalizeLibraryMedia(validateLibrary(data.library||data));
+        return new Blob([JSON.stringify(lib,null,2)],{type:'application/json'});
+      }
+    }catch(_){/* fallback below */}
+    return new Blob([JSON.stringify(canonicalizeLibraryMedia(validateLibrary(library)),null,2)],{type:'application/json'});
+  }
+  async importArchive(file){
+    const library=canonicalizeLibraryMedia(validateLibrary(JSON.parse(await file.text())));
+    const legacyReferences=legacyMediaReferences(library);
+    if(legacyReferences.length)throw new Error(`This is a legacy Cloud Catcher export with ${legacyReferences.length} hosted image references. Repair the archive first so its images are embedded, then import the repaired JSON.`);
+    return library;
+  }
+}
+
+export function detectLifeOsMode(locationLike=globalThis.location){
+  const pathname=String(locationLike?.pathname||'');
+  if(pathname==='/cloud-catcher'||pathname.startsWith('/cloud-catcher/'))return true;
+  const search=String(locationLike?.search||'');
+  try{
+    return new URLSearchParams(search).get('storage')==='lifeos';
+  }catch(_){
+    return false;
+  }
+}
+
+export function createDefaultStorageProvider(locationLike=globalThis.location){
+  return detectLifeOsMode(locationLike)?new LifeOsStorageProvider():new BrowserStorageProvider();
+}
+
 export class GoogleDriveStorageProvider{
   constructor({accessToken,folderId=null}){this.accessToken=accessToken;this.folderId=folderId;this.filename='cloud-catcher-library.json'}
   headers(extra={}){return{Authorization:`Bearer ${this.accessToken}`,...extra}}
@@ -56,4 +116,5 @@ export class GoogleDriveStorageProvider{
   async loadLibrary(){const f=await this.findLibraryFile();if(!f)return emptyLibrary();const r=await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,{headers:this.headers()});if(!r.ok)throw new Error(`Drive download failed: ${r.status}`);return validateLibrary(await r.json())}
   async saveLibrary(library){const existing=await this.findLibraryFile();const metadata={name:this.filename,mimeType:'application/json',...(this.folderId&&!existing?{parents:[this.folderId]}:{})};const boundary='cloud-catcher-boundary';const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(library)}\r\n--${boundary}--`;const url=existing?`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`:'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';const r=await fetch(url,{method:existing?'PATCH':'POST',headers:this.headers({'Content-Type':`multipart/related; boundary=${boundary}`}),body});if(!r.ok)throw new Error(`Drive save failed: ${r.status}`);return r.json()}
 }
+
 export function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),500)}
