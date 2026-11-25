@@ -1,20 +1,19 @@
 # Cloud Catcher use cases
 
-Status reflects the current browser-local MVP.
+Status reflects the current application (`main`).
 
 | Use case | Status | Current behavior | Main gap |
 | --- | --- | --- | --- |
 | Learn and quiz Level 1 | Works | Theory, reference examples and two deterministic practice modes; practice never changes progress. | No mastery history or spaced repetition. |
-| Catch from a photo | Works | Touch/mouse region selection plus an explicit cloud-type choice creates a confirmed detection. Save shows immediate progress and completion feedback; the crop is rendered locally from the original photo. | No direct camera action yet. |
-| Several clouds in one photo | Works | The original stays active and owns multiple normalized detections. | Saved regions cannot yet be edited visually. |
-| AI-assisted batch import | Partial | An authorized browser agent can call `window.cloudCatcher.importCloudPhotos` with many local files and detections. | No in-app analysis button and no remote connector. |
-| Review AI proposals | Partial | Proposed status is represented and excluded from progress; browser API can correct it. | Normal review UI is missing. |
-| Browse Atlas and journal | Works | Cards, crops, originals, progress and location collections use one local library. | Search, filtering and observation detail are missing. |
+| Catch from a photo (`F1`) | Works | Camera-first capture (`Take photo`) or file upload (`Choose photo`), EXIF timestamp/GPS hint parsing, touch/mouse region selection and explicit cloud-type validation. | No automatic GPS reverse-geocoding yet. |
+| Several clouds in one photo (`F2`) | Works | Existing saved and proposed regions render directly over the photo and can be tapped/redrawn in place without duplicating the original image. | Polygons via UI drawing not yet added (API supports polygons). |
+| AI-assisted batch import | Works | Local `window.cloudCatcher.importCloudPhotos` and LifeOS `/api/clouds` tailnet sync write into one canonical atlas format (`format: "cloud-catcher"`). | Standalone Netlify site remains offline-first without server-side AI inference. |
+| Review AI proposals (`F3`) | Works | Atlas shows a `Needs Review` queue with confidence, explanations, clickable lookalike alternatives, editable genus/notes, **Redraw**, **Confirm**, and **Reject**. | Needs cloud-spotter Live Run to populate automatically from Cyrus (`LifeOS#190`). |
+| Browse Atlas and observation detail (`F4`, `F11`) | Works | Filter by status (`All`/`Confirmed`/`Needs Review`), genus, and location; tap any detection or Level-1 card for full Observation Detail (`Crop` vs `Full photo & regions`, sibling catches, inline edit/confirm/reject). | Timeline/map aggregations remain future work (`F9`–`F11`). |
 | Complete Level 1/location | Partial | Unique confirmed genera are counted globally and by exact location. | No Level 2, celebration, or location alias normalization. |
 | Sessions | Partial | Domain and batch import support sessions. | No session-management UI. |
-| Export and restore | Works | Export opens the system share/save sheet when file sharing is supported, otherwise downloads the self-contained JSON. Import uses the system file picker, including available Drive providers. | Import replaces the current atlas; large libraries may produce large backup files. |
-| Keep data across deployments | Works | IndexedDB remains on the same site origin across static deployments and branch updates. | Different preview hostnames, browsers and devices do not share data. |
-| Use through AI/API | Partial | The local `window.cloudCatcher` API supports structured ingestion and correction without a second atlas. | Agent needs an authorized browser session or must generate an import archive. |
+| Export and restore (`F5`) | Works | Shows approximate atlas size and storage quota when supported; Export opens the system share/save sheet (or downloads JSON); Import uses the system file picker. | Large libraries remain subject to device storage quotas. |
+| Keep data across deployments | Works | IndexedDB remains on the same site origin across static deployments; when served under LifeOS (`/cloud-catcher/`), `LifeOsStorageProvider` syncs with the private tailnet atlas. | Unlinked browser origins do not share IndexedDB. |
 
 ## Verified rules
 
@@ -22,14 +21,8 @@ Status reflects the current browser-local MVP.
 2. Proposed/rejected detections do not advance progress.
 3. Level and location progress count unique confirmed genera.
 4. Regions support normalized rectangles and polygons.
-5. Manual and browser-API writes enter the same IndexedDB atlas.
+5. Manual, LifeOS tailnet sync, and browser-API writes enter the same atlas schema.
 6. Snippets are generated locally.
 7. Existing localStorage data migrates to IndexedDB.
-8. No hosted user-data read or write occurs.
+8. Static Netlify hosting performs zero hosted user-data reads or writes.
 9. Learn and Quiz never create catches.
-
-## Current core loop
-
-Learn → Quiz → choose a real photo → select and classify one or more regions → browse Atlas → export a backup from Data.
-
-For AI-assisted batches, the agent classifies locally available photos and calls `window.cloudCatcher.importCloudPhotos` inside the page. Future work is tracked in [`../FUTURE.md`](../FUTURE.md).

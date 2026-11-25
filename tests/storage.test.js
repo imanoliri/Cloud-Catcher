@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canonicalizeLibraryMedia,legacyMediaReferences} from '../src/storage.js';
+import {BrowserStorageProvider,LifeOsStorageProvider,canonicalizeLibraryMedia,createDefaultStorageProvider,detectLifeOsMode,legacyMediaReferences} from '../src/storage.js';
+import {emptyLibrary} from '../src/domain.js';
 import {repairLegacyArchive} from '../scripts/repair-legacy-archive.mjs';
 
 const archive={photos:[{id:'photo-1',imageRef:'/api/images/00000000-0000-4000-8000-000000000001'}],detections:[{photoId:'photo-1',snippetRef:'/api/snippets/00000000-0000-4000-8000-000000000002'}]};
@@ -38,4 +39,37 @@ test('canonical archives discard derived snippets when originals exist',()=>{
 
 test('legacy repair fails instead of producing another broken archive',async()=>{
   await assert.rejects(()=>repairLegacyArchive(archive,{origin:'https://legacy.example',fetchMedia:async()=>new Response('gone',{status:404})}),/HTTP 404/);
+});
+
+test('detectLifeOsMode selects LifeOsStorageProvider under /cloud-catcher/ or ?storage=lifeos',()=>{
+  assert.equal(detectLifeOsMode({pathname:'/',search:''}),false);
+  assert.equal(detectLifeOsMode({pathname:'/cloud-catcher/',search:''}),true);
+  assert.equal(detectLifeOsMode({pathname:'/',search:'?storage=lifeos'}),true);
+  assert.ok(createDefaultStorageProvider({pathname:'/cloud-catcher/'}) instanceof LifeOsStorageProvider);
+  assert.ok(createDefaultStorageProvider({pathname:'/'}) instanceof BrowserStorageProvider);
+});
+
+test('LifeOsStorageProvider round-trips canonical cloud-catcher library over fetch',async()=>{
+  const origFetch=globalThis.fetch;
+  const calls=[];
+  const lib=emptyLibrary();
+  globalThis.fetch=async(url,opts={})=>{
+    calls.push([String(url),opts.method||'GET']);
+    return new Response(JSON.stringify({library:lib}),{status:200,headers:{'Content-Type':'application/json'}});
+  };
+  try{
+    const provider=new LifeOsStorageProvider({baseUrl:'/api/clouds'});
+    const loaded=await provider.loadLibrary();
+    assert.equal(loaded.format,'cloud-catcher');
+    await provider.saveLibrary(loaded);
+    const blob=await provider.exportArchive(loaded);
+    assert.equal(JSON.parse(await blob.text()).format,'cloud-catcher');
+    assert.deepEqual(calls,[
+      ['/api/clouds/library','GET'],
+      ['/api/clouds/library','PUT'],
+      ['/api/clouds/library?embed_images=1','GET'],
+    ]);
+  }finally{
+    globalThis.fetch=origFetch;
+  }
 });

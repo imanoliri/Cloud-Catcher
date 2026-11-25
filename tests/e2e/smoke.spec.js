@@ -176,16 +176,80 @@ test('legacy hosted-image archive is rejected with recovery guidance',async({pag
 });
 
 test('export uses native file sharing with download fallback',async({page})=>{
+  const expectedName=`cloud-catcher-${new Date().toISOString().slice(0,10)}.json`;
   await page.getByRole('button',{name:'Data'}).click();
   await page.evaluate(()=>{
     Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
     Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{window.__sharedBackup={name:data.files[0].name,type:data.files[0].type,title:data.title}}});
   });
   await page.getByRole('button',{name:'Export / save backup'}).click();
-  await expect.poll(()=>page.evaluate(()=>window.__sharedBackup)).toEqual({name:'cloud-catcher-2026-08-28.json',type:'application/json',title:'Cloud Catcher atlas'});
+  await expect.poll(()=>page.evaluate(()=>window.__sharedBackup)).toEqual({name:expectedName,type:'application/json',title:'Cloud Catcher atlas'});
 
   await page.evaluate(()=>Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>false}));
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export / save backup'}).click();
-  expect((await downloadPromise).suggestedFilename()).toBe('cloud-catcher-2026-08-28.json');
+  expect((await downloadPromise).suggestedFilename()).toBe(expectedName);
+});
+
+test('camera input, proposal review, observation detail modal, and saved region redraw work',async({page})=>{
+  await page.getByRole('button',{name:'Catch'}).click();
+  await expect(page.locator('#photo-camera')).toHaveAttribute('capture','environment');
+
+  await page.evaluate(async imageDataUrl=>{
+    await window.cloudCatcher.importCloudPhotos({
+      session:{name:'AI outing',location:'Braunschweig'},
+      defaults:{location:'Braunschweig',source:'cloud-spotter'},
+      catches:[{
+        originalName:'ai-sky.svg',
+        imageDataUrl,
+        detections:[{
+          cloudTypeId:'altocumulus',
+          confidence:.74,
+          status:'proposed',
+          explanation:'Mid-level patch of rounded cloudlets.',
+          alternatives:['stratocumulus','cirrocumulus'],
+          region:{type:'rect',x:.15,y:.15,width:.5,height:.4},
+        }],
+      }],
+    });
+  },`data:image/svg+xml,${encodeURIComponent(tinySvg)}`);
+
+  await page.getByRole('button',{name:'Atlas'}).click();
+  await expect(page.getByRole('heading',{name:/Needs Review \(1\)/})).toBeVisible();
+  await expect(page.locator('.stats .stat strong').first()).toHaveText('0/10');
+
+  await page.locator('.review-card [data-alt-genus="stratocumulus"]').click();
+  await expect(page.locator('.review-card .review-type')).toHaveValue('stratocumulus');
+  await page.locator('.review-card [data-review-action="confirm"]').click();
+  await expect(page.locator('.stats .stat strong').first()).toHaveText('1/10');
+  await expect(page.locator('.review-queue')).toHaveCount(0);
+
+  await page.locator('.detection-thumb').first().click();
+  const dialog=page.locator('dialog.atlas-lightbox');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button',{name:'Full photo & regions'}).click();
+  await expect(dialog.locator('.atlas-overlay-box.is-focus')).toBeVisible();
+  await dialog.getByRole('button',{name:'Redraw region'}).click();
+
+  await expect(page.locator('#catch-view.active')).toBeVisible();
+  await expect(page.locator('.existing-region')).toHaveCount(1);
+});
+
+test('LifeOS storage mode reads and writes /api/clouds/library when ?storage=lifeos',async({page})=>{
+  const now='2026-11-25T08:00:00.000Z';
+  const serverLibrary={
+    format:'cloud-catcher',sessions:[],albums:[],createdAt:now,updatedAt:now,
+    photos:[{id:'p-lifeos',sessionId:null,location:'Braunschweig',observedAt:now,imageRef:`data:image/svg+xml,${encodeURIComponent(tinySvg)}`,originalName:'tailnet-sky.svg',notes:'',source:'cyrus',width:120,height:90,createdAt:now}],
+    detections:[{id:'d-lifeos',photoId:'p-lifeos',cloudTypeId:'cirrus',confidence:.9,region:{type:'rect',x:.1,y:.1,width:.6,height:.4},status:'proposed',notes:'',explanation:'Wispy filaments.',alternatives:['cirrostratus'],source:'cloud-spotter',createdAt:now,updatedAt:now}],
+  };
+  await page.route('**/api/clouds/library*',route=>{
+    if(route.request().method()==='GET')return route.fulfill({contentType:'application/json',body:JSON.stringify({library:serverLibrary})});
+    return route.fulfill({contentType:'application/json',body:JSON.stringify({library:serverLibrary})});
+  });
+  await page.goto('/?storage=lifeos');
+  expect(await page.evaluate(()=>window.cloudCatcher.getStorageMode())).toBe('lifeos');
+  await page.getByRole('button',{name:'Data'}).click();
+  await expect(page.getByRole('heading',{name:'Connected to private LifeOS tailnet atlas'})).toBeVisible();
+  await page.getByRole('button',{name:'Atlas'}).click();
+  await expect(page.getByRole('heading',{name:/Needs Review \(1\)/})).toBeVisible();
 });

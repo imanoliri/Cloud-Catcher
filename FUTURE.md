@@ -1,10 +1,12 @@
 # Future use cases
 
-This document tracks user journeys Cloud Catcher should support but does **not** yet support end to end. The current implementation audit lives in [`docs/USE_CASES.md`](docs/USE_CASES.md).
+This document tracks remaining future journeys for Cloud Catcher beyond the completed core field workflow (`F1–F4`, core `F5`, and status/genus/location filters from `F11` documented in [`docs/USE_CASES.md`](docs/USE_CASES.md)).
 
-## Priority 1 — Make the basic field workflow complete
+## Priority 1 — Completed (`F1–F4`, `F5` core) & remaining refinements
 
-### F1 — Take a photo directly from the phone
+> **Implemented on `main`:** `F1` camera-first capture + EXIF timestamp/GPS hints (`src/exif.js`), `F2` visual region overlays + in-place redraw, `F3` `Needs Review` proposal queue (`Confirm` / `Alternatives` / `Edit` / `Redraw` / `Reject`), `F4` Observation Detail modal (`Crop` / `Full photo & regions` / siblings), `F5` atlas size & browser quota visibility, and `LifeOsStorageProvider` for LifeOS tailnet sync (`/api/clouds/library`). Remaining future enhancements below keep polygon UI drawing, safe batch downsampling, standalone in-app vision (`F6`–`F8`), maps/timelines (`F9`–`F11`), Drive OAuth sync (`F12`), and Level 2+ (`F13`–`F24`).
+
+### F1 — Take a photo directly from the phone (Shipped)
 
 **Goal:** Open Cloud Catcher outdoors, launch the camera directly, take a photo and continue immediately to classification.
 

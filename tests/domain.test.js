@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addCatch,addDetection,addPhoto,addSession,emptyLibrary,levelProgress,makeDetection,makePhoto,makeSession,validateLibrary} from '../src/domain.js';
+import {addCatch,addDetection,addPhoto,addSession,emptyLibrary,levelProgress,makeDetection,makePhoto,makeSession,pendingProposals,updateDetection,updatePhoto,validateLibrary} from '../src/domain.js';
 import {LEVEL_ONE} from '../src/taxonomy.js';
 
 function addConfirmed(lib,cloudTypeId,location='San Sebastián'){
@@ -57,4 +57,32 @@ test('each Level 1 cloud genus has three distinct learning examples',()=>{
     assert.equal(type.referenceImages.length,3,type.id);
     assert.equal(new Set(type.referenceImages.map(example=>example.image)).size,3,type.id);
   }
+});
+
+test('proposals preserve explanations and alternatives and update cleanly',()=>{
+  let lib=emptyLibrary();
+  const photo=makePhoto({location:'Braunschweig'});
+  lib=addPhoto(lib,photo);
+  const det=makeDetection({
+    photoId:photo.id,
+    cloudTypeId:'cumulus',
+    confidence:.82,
+    status:'proposed',
+    explanation:'Flat bases with crisp sunlit tops.',
+    alternatives:['stratocumulus','cumulus','unknown-type'],
+    region:{type:'rect',x:.1,y:.2,width:.4,height:.3},
+  });
+  lib=addDetection(lib,det);
+  assert.deepEqual(det.alternatives,['stratocumulus']);
+  assert.equal(pendingProposals(lib).length,1);
+  assert.equal(levelProgress(lib).caught,0);
+
+  lib=updatePhoto(lib,photo.id,{location:'San Sebastián'});
+  assert.equal(lib.photos[0].location,'San Sebastián');
+
+  lib=updateDetection(lib,det.id,{cloudTypeId:'stratocumulus',status:'confirmed',region:{type:'rect',x:.2,y:.2,width:.5,height:.4},notes:'Verified after sunset'});
+  assert.equal(pendingProposals(lib).length,0);
+  assert.equal(levelProgress(lib,'San Sebastián'===null?1:1,'San Sebastián').caught,1);
+  assert.equal(lib.detections[0].region.x,0.2);
+  assert.equal(lib.detections[0].notes,'Verified after sunset');
 });

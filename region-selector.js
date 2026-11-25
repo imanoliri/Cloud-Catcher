@@ -8,8 +8,9 @@ function syncRegion(region){setField('#det-x',region.x);setField('#det-y',region
 function updateSaveState(){
   if(!active)return;
   const classified=Boolean(active.type.value);
+  const editing=Boolean(active.image?.dataset.editingId);
   active.save.disabled=!active.valid||!classified;
-  active.save.textContent=!active.valid?'Select a cloud region first':classified?'Save cloud':'Choose its cloud type';
+  active.save.textContent=!active.valid?'Select a cloud region first':classified?(editing?'Update region':'Save cloud'):'Choose its cloud type';
 }
 
 function clearSelection(message='Drag over a cloud to select the next region.'){
@@ -36,6 +37,45 @@ function point(event,box){
   return{x:clamp((event.clientX-box.left)/box.width),y:clamp((event.clientY-box.top)/box.height)};
 }
 
+function renderSavedOverlays(){
+  if(!active)return;
+  const {image,overlaysLayer}=active;
+  overlaysLayer.innerHTML='';
+  let list=[];
+  try{list=JSON.parse(image.dataset.existingDetections||'[]')}catch(_){list=[]}
+  const editingId=image.dataset.editingId||'';
+  if(!Array.isArray(list))return;
+  for(const item of list){
+    const r=item?.region?.type==='rect'?item.region:null;
+    if(!r||r.width<=0||r.height<=0)continue;
+    const box=document.createElement('button');
+    box.type='button';
+    box.className=`existing-region ${item.status==='proposed'?'is-proposed':'is-confirmed'} ${item.id===editingId?'is-editing':''}`.trim();
+    box.style.left=`${r.x*100}%`;
+    box.style.top=`${r.y*100}%`;
+    box.style.width=`${r.width*100}%`;
+    box.style.height=`${r.height*100}%`;
+    box.title=`Edit ${item.name||'cloud'} region`;
+    const tag=document.createElement('span');
+    tag.className='existing-region-label';
+    tag.textContent=item.name||item.cloudTypeId||'Cloud';
+    box.appendChild(tag);
+    box.addEventListener('pointerdown',ev=>ev.stopPropagation());
+    box.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      catchView.dispatchEvent(new CustomEvent('cloud-catcher-select-detection',{detail:{detectionId:item.id}}));
+    });
+    overlaysLayer.appendChild(box);
+    if(item.id===editingId){
+      active.valid=true;
+      drawSelection(r);
+      syncRegion(r);
+      updateSaveState();
+      active.help.textContent=`Editing ${item.name||'selected cloud'}. Drag on the photo to redraw its box or update fields.`;
+    }
+  }
+}
+
 function setupSelector(){
   const image=catchView.querySelector('#photo-preview img.photo-preview');
   const fieldset=catchView.querySelector('fieldset');
@@ -53,20 +93,23 @@ function setupSelector(){
 
   const shade=document.createElement('div');
   shade.className='region-selector-shade';
+  const overlaysLayer=document.createElement('div');
+  overlaysLayer.className='region-overlays';
   const selection=document.createElement('div');
   selection.className='region-selection';
   selection.hidden=true;
-  shell.append(shade,selection);
+  shell.append(shade,overlaysLayer,selection);
 
   const help=document.createElement('p');
   help.className='region-help';
   help.textContent='Drag over a cloud to select the region you want to classify.';
   shell.insertAdjacentElement('afterend',help);
 
-  active={shell,selection,help,save,type,valid:false,start:null,pointerId:null};
+  active={shell,image,overlaysLayer,selection,help,save,type,valid:false,start:null,pointerId:null};
+  if(!image.dataset.editingId)syncRegion({x:0,y:0,width:0,height:0});
   updateSaveState();
+  renderSavedOverlays();
   type.addEventListener('change',updateSaveState);
-  syncRegion({x:0,y:0,width:0,height:0});
 
   shell.addEventListener('pointerdown',event=>{
     if(event.button!==undefined&&event.button!==0)return;
@@ -109,5 +152,6 @@ function setupSelector(){
 
 new MutationObserver(()=>setupSelector()).observe(catchView,{childList:true,subtree:true});
 window.addEventListener('cloud-catcher-saved',()=>clearSelection('Caught. Drag over another cloud in this same photo to add another region.'));
+window.addEventListener('cloud-catcher-regions-updated',()=>renderSavedOverlays());
 
 setupSelector();
