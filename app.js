@@ -210,11 +210,11 @@ function renderActive(){
 }
 
 function renderCatch(){
-  views.catch.innerHTML=`<div class="panel"><p class="eyebrow">Real sky</p><h2>Catch clouds from a photo</h2><p>Choose a photo, drag over one cloud region, classify it, and save it. Repeat on the same photo for every cloud you want to catch.</p><div class="upload-grid"><div><label class="button file-label">Choose photo<input id="photo-file" type="file" accept="image/*"></label><div id="photo-preview">${pendingImage?`<img class="photo-preview" src="${pendingImage.dataUrl}" alt="Uploaded cloud photo" decoding="async">`:'<p class="muted">No photo selected.</p>'}</div></div><div>${pendingImage?detectionForm():''}</div></div><div id="upload-feedback"></div></div>`;
+  views.catch.innerHTML=`<div class="panel"><p class="eyebrow">Real sky</p><h2>Catch clouds from a photo</h2><p>Choose a photo, drag over one cloud region, classify it, and save it. Repeat on the same photo for every cloud you want to catch.</p><div class="upload-grid"><div><label class="button file-label">Choose photo<input id="photo-file" type="file" accept="image/*"></label><div id="photo-preview">${pendingImage?`<img class="photo-preview" src="${pendingImage.dataUrl}" alt="Uploaded cloud photo" decoding="async">`:'<p class="muted">No photo selected.</p>'}</div></div><div>${pendingImage?detectionForm():''}</div></div><div id="upload-feedback" role="status" aria-live="polite"></div></div>`;
   views.catch.querySelector('#photo-file').addEventListener('change',loadPhoto);
   views.catch.querySelector('#save-detection')?.addEventListener('click',saveRealDetection);
 }
-function detectionForm(){return`<label>Location<br><input id="photo-location" value="San Sebastián"></label><label>Cloud type<br><select id="det-type">${LEVEL_ONE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></label><label>Confidence (0–100%)<br><input id="det-confidence" type="number" min="0" max="100" value="90"></label><fieldset><legend>Crop region (% of photo)</legend><div class="region-grid"><label>Left<input id="det-x" type="number" min="0" max="100" value="0"></label><label>Top<input id="det-y" type="number" min="0" max="100" value="0"></label><label>Width<input id="det-w" type="number" min="0" max="100" value="0"></label><label>Height<input id="det-h" type="number" min="0" max="100" value="0"></label></div></fieldset><div class="toolbar"><button id="save-detection" class="primary">Select a cloud region first</button></div><p class="muted">After saving, drag another region on this same image to add another cloud.</p>`}
+function detectionForm(){return`<label>Location<br><input id="photo-location" value="San Sebastián"></label><label>Cloud type<br><select id="det-type"><option value="" selected>Choose cloud type</option>${LEVEL_ONE.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></label><label>Confidence (0–100%)<br><input id="det-confidence" type="number" min="0" max="100" value="90"></label><fieldset><legend>Crop region (% of photo)</legend><div class="region-grid"><label>Left<input id="det-x" type="number" min="0" max="100" value="0"></label><label>Top<input id="det-y" type="number" min="0" max="100" value="0"></label><label>Width<input id="det-w" type="number" min="0" max="100" value="0"></label><label>Height<input id="det-h" type="number" min="0" max="100" value="0"></label></div></fieldset><div class="toolbar"><button id="save-detection" class="primary">Select a cloud region first</button></div><p class="muted">After saving, drag another region on this same image to add another cloud.</p>`}
 async function loadPhoto(e){const file=e.target.files?.[0];if(!file)return;const dataUrl=await fileDataUrl(file);const size=await imageSize(dataUrl);pendingImage={file,dataUrl,...size,photoId:null};renderCatch()}
 function regionBounds(region){return region.type==='polygon'?{x:Math.min(...region.points.map(p=>p[0])),y:Math.min(...region.points.map(p=>p[1])),width:Math.max(...region.points.map(p=>p[0]))-Math.min(...region.points.map(p=>p[0])),height:Math.max(...region.points.map(p=>p[1]))-Math.min(...region.points.map(p=>p[1]))}:region}
 function detectionCrop(d,className=''){
@@ -224,14 +224,29 @@ function detectionCrop(d,className=''){
   return `<div class="crop-frame ${className}" style="position:relative;display:block;width:100%;overflow:hidden;background:#edf5fa;aspect-ratio:${ratio}" data-crop="${escapeHtml(JSON.stringify(b))}"><img src="${escapeHtml(photo.imageRef)}" alt="Cloud crop" loading="lazy" decoding="async" style="position:absolute;max-width:none;object-fit:fill;width:${100/b.width}%;height:${100/b.height}%;left:${-100*b.x/b.width}%;top:${-100*b.y/b.height}%"></div>`;
 }
 async function saveRealDetection(){
+  const save=views.catch.querySelector('#save-detection');
+  const feedback=views.catch.querySelector('#upload-feedback');
   const location=views.catch.querySelector('#photo-location')?.value||'Unknown';
-  if(!pendingImage?.photoId){const photo=makePhoto({location,imageRef:pendingImage.dataUrl,originalName:pendingImage.file.name,width:pendingImage.width,height:pendingImage.height,source:'upload'});library=addPhoto(library,photo);pendingImage.photoId=photo.id}
   const pct=id=>Math.max(0,Math.min(100,Number(views.catch.querySelector(id)?.value||0)))/100;
   const region={type:'rect',x:pct('#det-x'),y:pct('#det-y'),width:pct('#det-w'),height:pct('#det-h')};
   if(region.width<=0||region.height<=0)return;
-  const detection=makeDetection({photoId:pendingImage.photoId,cloudTypeId:views.catch.querySelector('#det-type').value,confidence:Number(views.catch.querySelector('#det-confidence').value)/100,region,status:'confirmed',source:'manual-upload'});
-  library=addDetection(library,detection);await storage.saveLibrary(library);
-  views.catch.querySelector('#upload-feedback').innerHTML=`<div class="feedback"><strong>Caught!</strong> ${getCloudType(detection.cloudTypeId).name} added. Drag another region on this photo to add another cloud.</div>`;
+  const cloudTypeId=views.catch.querySelector('#det-type').value;
+  if(!cloudTypeId)return;
+  save.disabled=true;save.textContent='Saving cloud…';
+  feedback.innerHTML='<div class="feedback"><strong>Saving cloud…</strong> Keeping the photo in your private atlas.</div>';
+  const previousLibrary=library,previousPhotoId=pendingImage.photoId;
+  try{
+    if(!pendingImage?.photoId){const photo=makePhoto({location,imageRef:pendingImage.dataUrl,originalName:pendingImage.file.name,width:pendingImage.width,height:pendingImage.height,source:'upload'});library=addPhoto(library,photo);pendingImage.photoId=photo.id}
+    const detection=makeDetection({photoId:pendingImage.photoId,cloudTypeId,confidence:Number(views.catch.querySelector('#det-confidence').value)/100,region,status:'confirmed',source:'manual-upload'});
+    library=addDetection(library,detection);
+    feedback.innerHTML=`<div class="feedback"><strong>Caught!</strong> ${getCloudType(detection.cloudTypeId).name} added. Drag another region on this photo to add another cloud.</div>`;
+    window.dispatchEvent(new CustomEvent('cloud-catcher-saved'));
+    await storage.saveLibrary(library);
+  }catch(error){
+    library=previousLibrary;pendingImage.photoId=previousPhotoId;
+    save.disabled=false;save.textContent='Try saving again';
+    feedback.innerHTML=`<div class="feedback error"><strong>Could not save.</strong> ${escapeHtml(error instanceof Error?error.message:'Please try again.')}</div>`;
+  }
 }
 
 function renderDetectionThumb(d){const type=getCloudType(d.cloudTypeId);return`<figure class="detection-thumb ${d.status==='proposed'?'proposed':''}">${detectionCrop(d)}<figcaption><strong>${escapeHtml(type?.name||d.cloudTypeId)}</strong>${d.confidence==null?'':` · ${Math.round(d.confidence*100)}%`}${d.status==='proposed'?' · proposed':''}</figcaption></figure>`}

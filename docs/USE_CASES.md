@@ -5,7 +5,7 @@ Status reflects the current browser-local MVP.
 | Use case | Status | Current behavior | Main gap |
 | --- | --- | --- | --- |
 | Learn and quiz Level 1 | Works | Theory, reference examples and two deterministic practice modes; practice never changes progress. | No mastery history or spaced repetition. |
-| Catch from a photo | Works | Touch/mouse region selection creates a confirmed detection; its crop is rendered locally from the original photo. | No direct camera action yet. |
+| Catch from a photo | Works | Touch/mouse region selection plus an explicit cloud-type choice creates a confirmed detection. Save shows immediate progress and completion feedback; the crop is rendered locally from the original photo. | No direct camera action yet. |
 | Several clouds in one photo | Works | The original stays active and owns multiple normalized detections. | Saved regions cannot yet be edited visually. |
 | AI-assisted batch import | Partial | An authorized browser agent can call `window.cloudCatcher.importCloudPhotos` with many local files and detections. | No in-app analysis button and no remote connector. |
 | Review AI proposals | Partial | Proposed status is represented and excluded from progress; browser API can correct it. | Normal review UI is missing. |
